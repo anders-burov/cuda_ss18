@@ -71,6 +71,7 @@ int main(int argc,char **argv)
     int w = mIn.cols;         // width
     int h = mIn.rows;         // height
     int nc = mIn.channels();  // number of channels
+    int n = w*h*nc;
     std::cout << "Image: " << w << " x " << h << std::endl;
 
     // Before the GPU can process your kernels, a so called "CUDA context" must be initialized
@@ -82,12 +83,17 @@ int main(int argc,char **argv)
     // Let mOut have the same number of channels as the input image (e.g. for the "invert image" or the "convolution" exercise)
     // To let mOut be a color image with 3 channels: CV_32FC3 instead of mIn.type() (e.g. for "visualization of the laplacian" exercise)
     // To let mOut be a grayscale image: use CV_32FC1 instead of mIn.type() (e.g. for the "visualization of the gradient absolute value" exercise)
-    //
+
     // ### TODO: Change the output image format as needed by the exercise (CV_32FC1 for grayscale, CV_32FC3 for color, mIn.type() for same as input)
     cv::Mat mOut(h, w, mIn.type());  // grayscale or color depending on input image, nc layers
-    //cv::Mat mOut(h, w, CV_32FC3);    // color, 3 layers
-    //cv::Mat mOut(h, w, CV_32FC1);    // grayscale, 1 layer
-    //
+    if (gray)
+    {
+        mOut.convertTo(mOut, CV_32FC1);
+    }
+    else
+    {
+        mOut.convertTo(mOut, CV_32FC1);
+    }
     // If you want to display other images, define them here as needed, e.g. the opencv image for the convolution kernel
 
     // ### Allocate arrays
@@ -97,14 +103,16 @@ int main(int argc,char **argv)
     // output image number of channels: mOut.channels(), as defined above depending on the exercise (1 for grayscale, 3 for color, nc for general)
     //
     // allocate raw input image array
-    float *imgIn = NULL;    // TODO allocate array
+    float *imgIn = new float[n];
     // allocate raw output array (the computation result will be stored in this array, then later converted to mOut for displaying)
-    float *imgOut = NULL;   // TODO allocate array
+    float *imgOut = new float[n];
 
     // allocate arrays on GPU
     float *d_imgIn = NULL;
     float *d_imgOut = NULL;
     // TODO alloc cuda memory for d_imgIn and d_imgOut
+    cudaMalloc(&d_imgIn, n* sizeof(float)); CUDA_CHECK;
+    cudaMalloc(&d_imgOut, n* sizeof(float)); CUDA_CHECK;
 
     do
     {
@@ -149,6 +157,7 @@ int main(int argc,char **argv)
         {
             // 1. Copy to device
             // TODO copy from imgIn to d_imgIn
+            cudaMemcpy(d_imgIn, imgIn, n * sizeof(float), cudaMemcpyHostToDevice); CUDA_CHECK;
 
             // 2. Execute kernel
             Timer timer;
@@ -164,6 +173,7 @@ int main(int argc,char **argv)
 
             // 3. Copy back to CPU
             // TODO copy from d_imgOut to imgOut
+            cudaMemcpy(imgOut, d_imgOut, n * sizeof(float), cudaMemcpyDeviceToHost); CUDA_CHECK;
         }
 
         // show input image
@@ -204,7 +214,12 @@ int main(int argc,char **argv)
 
     // ### Free allocated arrays
     // TODO free cuda memory of all device arrays
+    cudaFree(d_imgIn); CUDA_CHECK;
+    cudaFree(d_imgOut); CUDA_CHECK;
+
     // TODO free memory of all host arrays
+    delete imgIn;
+    delete imgOut;
 
     // close all opencv windows
     cv::destroyAllWindows();

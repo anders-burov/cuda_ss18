@@ -1,0 +1,11 @@
+1.1 V9.1.85
+1.2
+	a) "GeForce GTX 1050 Ti", 6.1
+	b) (6) Multiprocessors, (128) CUDA Cores/MP
+	c) 4040 MBytes
+	d) 65536, 49152 bytes
+
+2.3
+  squareArray: Used 5 registers, 328 bytes cmem[0] 
+  addArrays: Used 8 registers, 348 bytes cmem[0]
+

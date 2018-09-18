@@ -21,8 +21,11 @@ void cuda_check(string file, int line)
     }
 }
 
-
-
+__global__ void SquareArray(float *a)
+{
+    int idx = threadIdx.x + blockDim.x * blockIdx.x;
+    a[idx] *= a[idx];
+}
 
 int main(int argc,char **argv)
 {
@@ -50,6 +53,17 @@ int main(int argc,char **argv)
     // reinit data
     for(int i=0; i<n; i++) a[i] = i;
 
+    float *d_a;
+    cudaMalloc(&d_a, n * sizeof(float)); CUDA_CHECK;
+
+    cudaMemcpy(d_a, a, n * sizeof(float), cudaMemcpyHostToDevice); CUDA_CHECK;
+    
+    dim3 block = dim3(n, 1, 1);
+    dim3 grid = dim3(1, 1, 1);
+    SquareArray <<<grid, block>>>(d_a);
+
+    cudaMemcpy(a, d_a, n * sizeof(float), cudaMemcpyDeviceToHost); CUDA_CHECK;
+    cudaFree(d_a); CUDA_CHECK;
     
     // ###
     // ### TODO (2.1) Implement the "square array" operation on the GPU and store the result in "a"
