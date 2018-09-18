@@ -13,29 +13,24 @@ __global__
 void computeGradientKernel(float *u, float *v, const float *imgIn, int w, int h, int nc)
 {
     // TODO (4.1) compute gradient in x-direction (u) and y-direction (v)
-    int id_x = threadIdx.x + blockDim.x * blockIdx.x;
-    int id_y = threadIdx.y + blockDim.y * blockIdx.y;
+    int x = threadIdx.x + blockDim.x * blockIdx.x;
+    int y = threadIdx.y + blockDim.y * blockIdx.y;
+    int z = threadIdx.z + blockDim.z * blockIdx.z;
 
     // x-direction
-    if (id_x + 1 < w && id_y < h)
+    if (x + 1 < w && y < h)
     {
-        for (int c = 0; c < nc; c++)
-        {
-            int idx = c*h*w + id_y*w + id_x;
-            int idx1 = c*h*w + id_y*w + id_x+1;
-            u[idx] = imgIn[idx1] - imgIn[idx];
-        }
+        int idx = z*h*w + y*w + x;
+        int idx1 = z*h*w + y*w + x+1;
+        u[idx] = imgIn[idx1] - imgIn[idx];
     }
 
     // y-direction
-    if (id_x < w && id_y+1 < h)
+    if (x < w && y+1 < h)
     {
-        for (int c = 0; c < nc; c++)
-        {
-            int idx = c*h*w + id_y*w + id_x;
-            int idx1 = c*h*w + (id_y+1)*w + id_x;
-            v[idx] = imgIn[idx1] - imgIn[idx];
-        }
+        int idx = z*h*w + y*w + x;
+        int idx1 = z*h*w + (y+1)*w + x;
+        v[idx] = imgIn[idx1] - imgIn[idx];
     }
 }
 
@@ -43,7 +38,7 @@ void computeGradientKernel(float *u, float *v, const float *imgIn, int w, int h,
 void computeGradientCuda(float *u, float *v, const float *imgIn, int w, int h, int nc)
 {
     // calculate block and grid size
-    dim3 block(32, 8, 1);     // TODO (4.1) specify suitable block size
+    dim3 block(32, 8, nc);     // TODO (4.1) specify suitable block size
     dim3 grid = computeGrid2D(block, w, h);
 
     // run cuda kernel

@@ -14,16 +14,14 @@ __global__
 void computeGammaKernel(float *imgOut, const float *imgIn, float gamma, int w, int h, int nc)
 {
     // TODO (3.2) implement kernel for gamma correction
-    int id_x = threadIdx.x + blockDim.x * blockIdx.x;
-    int id_y = threadIdx.y + blockDim.y * blockIdx.y;
+    int x = threadIdx.x + blockDim.x * blockIdx.x;
+    int y = threadIdx.y + blockDim.y * blockIdx.y;
+    int z = threadIdx.z + blockDim.z * blockIdx.z;
 
-    if (id_x < w && id_y < h)
+    if (x < w && y < h)
     {
-        for (int c = 0; c < nc; c++)
-        {
-            int idx = c*h*w + id_y*w + id_x;
-            imgOut[idx] = powf(imgIn[idx], gamma);
-        }
+        int idx = z*h*w + y*w + x;
+        imgOut[idx] = powf(imgIn[idx], gamma);
     }
 }
 
@@ -60,7 +58,7 @@ void computeGammaCuda(float *imgOut, const float *imgIn, float gamma, int w, int
     }
 
     // calculate block and grid size
-    dim3 block(32, 8, 1);     // TODO (3.2) specify suitable block size
+    dim3 block(32, 8, nc);     // TODO (3.2) specify suitable block size
 
     // TODO (3.2) implement computeGrid2D() in helper.cuh etc
     dim3 grid = computeGrid2D(block, w, h);

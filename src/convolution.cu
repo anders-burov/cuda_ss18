@@ -24,26 +24,8 @@ void computeConvolutionTextureMemKernel(float *imgOut, const float *imgIn, const
 __global__
 void computeConvolutionSharedMemKernel(float *imgOut, const float *imgIn, const float *kernel, int kradius, int w, int h, int nc)
 {
-    int id_x = threadIdx.x + blockDim.x * blockIdx.x;
-    int id_y = threadIdx.y + blockDim.y * blockIdx.y;
+    // TODO (6.1) compute convolution using shared memory
 
-    int kdiameter = 2*kradius+1;
-
-    if (id_x < w && id_y < h)
-    {
-        for (int c = 0; c < nc; c++)
-        {
-            int idx = c*h*w + id_y*w + id_x;
-            imgOut[idx] = 0;
-            for (int v = -kradius; v <= kradius; v++)
-            {
-                for (int u = -kradius; u <= kradius; u++)
-                {
-                   imgOut[idx] += imgIn[c*w*h + max(min(id_y+v,h-1),0)*w + max(min(id_x+u,w-1),0)]*kernel[(v+kradius)*kdiameter+(u+kradius)];
-                }
-            }
-        }
-    }
 }
 
 
@@ -51,6 +33,24 @@ __global__
 void computeConvolutionGlobalMemKernel(float *imgOut, const float *imgIn, const float *kernel, int kradius, int w, int h, int nc)
 {
     // TODO (5.4) compute convolution using global memory
+    int x = threadIdx.x + blockDim.x * blockIdx.x;
+    int y = threadIdx.y + blockDim.y * blockIdx.y;
+    int z = threadIdx.z + blockDim.z * blockIdx.z;
+
+    int kdiameter = 2*kradius+1;
+
+    if (x < w && y < h && z < nc)
+    {
+        int idx = z*h*w + y*w + x;
+        imgOut[idx] = 0;
+        for (int v = -kradius; v <= kradius; v++)
+        {
+            for (int u = -kradius; u <= kradius; u++)
+            {
+               imgOut[idx] += imgIn[z*w*h + max(min(y+v,h-1),0)*w + max(min(x+u,w-1),0)]*kernel[(v+kradius)*kdiameter+(u+kradius)];
+            }
+        }
+    }
 }
 
 
@@ -163,7 +163,7 @@ void computeConvolutionGlobalMemCuda(float *imgOut, const float *imgIn, const fl
     }
 
     // calculate block and grid size
-    dim3 block(32, 8, 1);     // TODO (5.4) specify suitable block size
+    dim3 block(32, 8, nc);     // TODO (5.4) specify suitable block size
     dim3 grid = computeGrid2D(block, w, h);
 
     // run cuda kernel

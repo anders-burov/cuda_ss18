@@ -13,15 +13,15 @@ __global__
 void computeNormKernel(float *imgOut, const float *u, int w, int h, int nc)
 {
     // TODO (4.3) compute norm
-    int id_x = threadIdx.x + blockDim.x * blockIdx.x;
-    int id_y = threadIdx.y + blockDim.y * blockIdx.y;
+    int x = threadIdx.x + blockDim.x * blockIdx.x;
+    int y = threadIdx.y + blockDim.y * blockIdx.y;
 
-    if (id_x < w && id_y < h)
+    if (x < w && y < h)
     {
-        imgOut[id_y*w + id_x] = 0;
+        imgOut[y*w + x] = 0;
         for (int c = 0; c < nc; c++)
         {
-            int idx = c*h*w + id_y*w + id_x;
+            int idx = c*h*w + y*w + x;
             imgOut[idx] += u[idx]*u[idx];
         }
     }
