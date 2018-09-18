@@ -65,6 +65,7 @@ int main(int argc,char **argv)
     int w = mIn.cols;         // width
     int h = mIn.rows;         // height
     int nc = mIn.channels();  // number of channels
+    int n = w*h*nc;
     std::cout << "Image: " << w << " x " << h << std::endl;
 
     // initialize CUDA context
@@ -78,12 +79,12 @@ int main(int argc,char **argv)
 
     // ### Allocate arrays
     // allocate raw input image array
-    float *imgIn = NULL;    // TODO allocate array
+    float *imgIn = new float[n];
     // allocate raw output array (the computation result will be stored in this array, then later converted to mOut for displaying)
-    float *imgOut_lapNorm = NULL;   // TODO allocate array
-    float *imgOut_u = NULL;         // TODO allocate array
-    float *imgOut_v = NULL;         // TODO allocate array
-    float *imgOut_w = NULL;         // TODO allocate array
+    float *imgOut_lapNorm = new float[w*h];
+    float *imgOut_u = new float[n];
+    float *imgOut_v = new float[n];
+    float *imgOut_w = new float[n];
 
     // allocate arrays on GPU
     float *d_imgIn = NULL;
@@ -92,6 +93,11 @@ int main(int argc,char **argv)
     float *d_v = NULL;
     float *d_w = NULL;
     // TODO alloc cuda memory for device arrays
+    cudaMalloc(&d_imgIn, n* sizeof(float)); CUDA_CHECK;
+    cudaMalloc(&d_lapNorm, w*h* sizeof(float)); CUDA_CHECK;
+    cudaMalloc(&d_u, n* sizeof(float)); CUDA_CHECK;
+    cudaMalloc(&d_v, n* sizeof(float)); CUDA_CHECK;
+    cudaMalloc(&d_w, n* sizeof(float)); CUDA_CHECK;
 
     do
     {
@@ -102,6 +108,7 @@ int main(int argc,char **argv)
         convertMatToLayered (imgIn, mIn);
         // upload to GPU
         // TODO copy from imgIn to d_imgIn
+        cudaMemcpy(d_imgIn, imgIn, n * sizeof(float), cudaMemcpyHostToDevice); CUDA_CHECK;
 
         Timer timer;
         timer.start();
@@ -125,12 +132,24 @@ int main(int argc,char **argv)
 
         // copy back to CPU
         // TODO download from device arrays to host arrays
+        cudaMemcpy(imgOut_lapNorm, d_lapNorm, w*h * sizeof(float), cudaMemcpyDeviceToHost); CUDA_CHECK;
+        cudaMemcpy(imgOut_u, d_u, n * sizeof(float), cudaMemcpyDeviceToHost); CUDA_CHECK;
+        cudaMemcpy(imgOut_v, d_v, n * sizeof(float), cudaMemcpyDeviceToHost); CUDA_CHECK;
+        cudaMemcpy(imgOut_w, d_w, n * sizeof(float), cudaMemcpyDeviceToHost); CUDA_CHECK;
 
         // show input image
-        showImage("Input", mIn, 100, 100);  // show at position (x_from_left=100,y_from_above=100)
+        showImage("Input", mIn, 100, 80);  // show at position (x_from_left=100,y_from_above=100)
 
         // show output image: first convert to interleaved opencv format from the layered raw array
         // TODO (4.4) show gradient, divergence and laplacian
+        convertLayeredToMat(mOut_u, imgOut_u);
+        convertLayeredToMat(mOut_v, imgOut_v);
+        convertLayeredToMat(mOut_w, imgOut_w);
+        convertLayeredToMat(mOut_lapNorm, imgOut_lapNorm);
+        showImage("gradient x", mOut_u, 100, 80+h+40);
+        showImage("gradient y", mOut_v, 100+w/2 + 40, 80+h+40);
+        showImage("laplacian per channel", mOut_w, 100 + w + 80, 80+h+40);
+        showImage("laplacian norm", mOut_lapNorm, 100 + w + 80, 80);
 
         if (useCam)
         {
@@ -161,7 +180,18 @@ int main(int argc,char **argv)
 
     // ### Free allocated arrays
     // TODO free cuda memory of all device arrays
+    cudaFree(d_imgIn); CUDA_CHECK;
+    cudaFree(d_lapNorm); CUDA_CHECK;
+    cudaFree(d_u); CUDA_CHECK;
+    cudaFree(d_v); CUDA_CHECK;
+    cudaFree(d_w); CUDA_CHECK;
+
     // TODO free memory of all host arrays
+    delete[] imgIn;
+    delete[] imgOut_lapNorm;
+    delete[] imgOut_u;
+    delete[] imgOut_v;
+    delete[] imgOut_w;
 
     // close all opencv windows
     cv::destroyAllWindows();

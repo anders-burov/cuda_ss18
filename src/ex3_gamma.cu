@@ -138,7 +138,7 @@ int main(int argc,char **argv)
         // ###    Timer timer; timer.start();
         // ###    ...
         // ###    timer.end();  float t = timer.get();  // elapsed time in seconds
-        // ###    std::cout << "time: " << t*1000 << " ms" << std::endl;
+        // ###    std::cout << "time: " << t*1000 << " ms" << std::https://github.com/anders-burov/cuda_ss18.gitendl;
         // ###
 
         if (cpu)
@@ -218,8 +218,8 @@ int main(int argc,char **argv)
     cudaFree(d_imgOut); CUDA_CHECK;
 
     // TODO free memory of all host arrays
-    delete imgIn;
-    delete imgOut;
+    delete[] imgIn;
+    delete[] imgOut;
 
     // close all opencv windows
     cv::destroyAllWindows();

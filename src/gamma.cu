@@ -37,11 +37,11 @@ void computeGamma(float *imgOut, const float *imgIn, float gamma, size_t w, size
     }
 
     // TODO (3.1) compute gamma correction on CPU
-    for (int c = 0; c < nc; c++)
+    for (size_t c = 0; c < nc; c++)
     {
-        for (int j = 0; j < h; j++)
+        for (size_t j = 0; j < h; j++)
         {
-            for (int i = 0; i < w; i++)
+            for (size_t i = 0; i < w; i++)
             {
                 size_t idx = c*w*h + j*w + i;
                 imgOut[idx] = pow(imgIn[idx], gamma);
