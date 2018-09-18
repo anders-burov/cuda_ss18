@@ -5,6 +5,8 @@
 #ifndef TUM_CONVOLUTION_H
 #define TUM_CONVOLUTION_H
 
+#define PI 3.14159265359f
+
 #include <iostream>
 
 void createConvolutionKernel(float *kernel, int kradius, float sigma);

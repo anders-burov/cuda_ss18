@@ -23,8 +23,8 @@ SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 
 # CUDA
 FIND_PACKAGE(CUDA REQUIRED)
-SET(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-arch sm_35 -g -G)
-SET(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};--ptxas-options=-v --use_fast_math -O3 --compiler-options -Wall)
+SET(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-arch sm_35 -g -G -O0)
+SET(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};--ptxas-options=-v --use_fast_math --compiler-options -Wall)
 
 # OpenCV
 FIND_PACKAGE(OpenCV 2.4.8 COMPONENTS
@@ -37,10 +37,10 @@ ENDIF()
 
 # ------------------------------------------------------------------------
 # C++ flags
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -funroll-loops -Wno-deprecated -pthread")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -funroll-loops -Wno-deprecated -pthread")
 IF(CMAKE_COMPILER_IS_GNUCC)
     # Add -O0 to remove optimizations when using gcc
-    SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
+    SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
 ENDIF()
 
 

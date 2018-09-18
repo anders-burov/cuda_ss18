@@ -5,6 +5,7 @@
 
 #include <iostream>
 #include <string>
+#include <algorithm>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
@@ -76,23 +77,30 @@ int main(int argc,char **argv)
     mIn.convertTo(mIn, CV_32F);
 
     // init kernel
-    int kradius = 0;    // TODO (5.1) calculate kernel radius using sigma
+    int kradius = ceil(3 * sigma);    // TODO (5.1) calculate kernel radius using sigma
     std::cout << "kradius: " << kradius << std::endl;
-    int k_diameter = 0;     // TODO (5.1) calculate kernel diameter from radius
+    int k_diameter = 2*kradius+1;     // TODO (5.1) calculate kernel diameter from radius
     int kn = k_diameter*k_diameter;
-    float *kernel = NULL;    // TODO (5.1) allocate array
+    float *kernel = new float[kn];    // TODO (5.1) allocate array
+
     // TODO (5.1) implement createConvolutionKernel() in convolution.cu
     createConvolutionKernel(kernel, kradius, sigma);
 
-    cv::Mat mKernel(k_diameter,k_diameter,CV_32FC1);
+    float *kernel2visualize = new float[kn];
+    memcpy(kernel2visualize, kernel, kn* sizeof(float));
+    float max_element_in_kernel = *std::max_element(kernel2visualize, kernel2visualize+kn);
+    for (int i = 0; i < k_diameter*k_diameter; i++)
     {
-        // TODO (5.2) fill mKernel for visualization
+        kernel2visualize[i] *= 1/max_element_in_kernel;
     }
+
+    cv::Mat mKernel(k_diameter,k_diameter,CV_32FC1,kernel2visualize);
 
     // get image dimensions
     int w = mIn.cols;         // width
     int h = mIn.rows;         // height
     int nc = mIn.channels();  // number of channels
+    int n = w*h*nc;
     std::cout << "Image: " << w << " x " << h << std::endl;
 
     // initialize CUDA context
@@ -103,15 +111,18 @@ int main(int argc,char **argv)
 
     // ### Allocate arrays
     // allocate raw input image array
-    float *imgIn = NULL;    // TODO allocate array
+    float *imgIn = new float[n];
     // allocate raw output array (the computation result will be stored in this array, then later converted to mOut for displaying)
-    float *imgOut = NULL;   // TODO allocate array
+    float *imgOut = new float[n];
 
     // allocate arrays on GPU
     float *d_imgIn = NULL;
     float *d_imgOut = NULL;
     float *d_kernel = NULL;
     // TODO alloc cuda memory for device arrays
+    cudaMalloc(&d_imgIn, n* sizeof(float)); CUDA_CHECK;
+    cudaMalloc(&d_imgOut, n* sizeof(float)); CUDA_CHECK;
+    cudaMalloc(&d_kernel, kn* sizeof(float)); CUDA_CHECK;
 
     do
     {
@@ -135,6 +146,9 @@ int main(int argc,char **argv)
             // upload to GPU
 
             // TODO copy all necessary arrays from host to device
+            cudaMemcpy(d_imgIn, imgIn, n * sizeof(float), cudaMemcpyHostToDevice); CUDA_CHECK;
+            cudaMemcpy(d_kernel, kernel, kn * sizeof(float), cudaMemcpyHostToDevice); CUDA_CHECK;
+
 
             // if using constant memory
             // TODO (6.3) copy kernel from host to constant memory
@@ -171,6 +185,7 @@ int main(int argc,char **argv)
             std::cout << "time: " << t*1000 << " ms" << std::endl;
 
             // TODO copy all necessary arrays from device to host
+            cudaMemcpy(imgOut, d_imgOut, n * sizeof(float), cudaMemcpyDeviceToHost); CUDA_CHECK;
         }
 
         // show input image
@@ -214,7 +229,15 @@ int main(int argc,char **argv)
 
     // ### Free allocated arrays
     // TODO free cuda memory of all device arrays
+    cudaFree(d_imgIn); CUDA_CHECK;
+    cudaFree(d_imgOut); CUDA_CHECK;
+    cudaFree(d_kernel); CUDA_CHECK;
+
     // TODO free memory of all host arrays
+    delete[] imgIn;
+    delete[] imgOut;
+    delete[] kernel;
+    delete[] kernel2visualize;
 
     // close all opencv windows
     cv::destroyAllWindows();
