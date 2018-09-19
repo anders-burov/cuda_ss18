@@ -12,12 +12,34 @@
 // TODO (6.3) define constant memory for convolution kernel
 
 // TODO (6.2) define texture for image
+texture<float,2,cudaReadModeElementType> texRef;
 
 
 __global__
 void computeConvolutionTextureMemKernel(float *imgOut, const float *imgIn, const float *kernel, int kradius, int w, int h, int nc)
 {
     // TODO (6.2) compute convolution using texture memory
+    int x = threadIdx.x + blockDim.x*blockIdx.x;
+    int y = threadIdx.y + blockDim.y*blockIdx.y;
+    float val = tex2D(texRef, x+0.5f, y+0.5f);
+
+    int kdiameter = 2*kradius+1;
+
+    if (x < w && y < h)
+    {
+        for (int z = 0; z < nc; z++)
+        {
+            int idx = z*h*w + y*w + x;
+            imgOut[idx] = 0;
+            for (int v = -kradius; v <= kradius; v++)
+            {
+                for (int u = -kradius; u <= kradius; u++)
+                {
+                   imgOut[idx] += tex2D(texRef, x+u+0.5, max(min(y+v+0.5,h-0.5),0.5) + h*z) * kernel[(v+kradius)*kdiameter+(u+kradius)];
+                }
+            }
+        }
+    }
 }
 
 
@@ -57,6 +79,7 @@ void computeConvolutionSharedMemKernel(float *imgOut, const float *imgIn, const 
         if (x < w && y < h)
         {
             int idx = z*h*w + y*w + x;
+            imgOut[idx] = 0;
 
             for (int j = 0; j < kdiameter; j++)
             {
@@ -162,18 +185,28 @@ void computeConvolutionTextureMemCuda(float *imgOut, const float *imgIn, const f
     }
 
     // calculate block and grid size
-    dim3 block(0, 0, 0);     // TODO (6.2) specify suitable block size
+    dim3 block(32, 32, 1);     // TODO (6.2) specify suitable block size
     dim3 grid = computeGrid2D(block, w, h);
 
+    texRef.addressMode[0] = cudaAddressModeClamp; // clamp x to border
+    texRef.addressMode[1] = cudaAddressModeClamp; // clamp y to border
+    texRef.normalized = false; // access as (x+0.5f,y+0.5f), not as ((x+0.5f)/w,(y+0.5f)/h)
+
     // TODO (6.2) bind texture
+    cudaChannelFormatDesc desc = cudaCreateChannelDesc<float>();
+    cudaBindTexture2D(NULL, &texRef, imgIn, &desc, w, h*nc, w*sizeof(imgIn[0])); CUDA_CHECK;
 
     // run cuda kernel
     // TODO (6.2) execute kernel for convolution using global memory
+    computeConvolutionTextureMemKernel <<<grid, block>>> (imgOut, imgIn, kernel, kradius, w, h, nc);
+    CUDA_CHECK;
 
     // TODO (6.2) unbind texture
+    cudaUnbindTexture(texRef);
 
     // check for errors
     // TODO (6.2)
+    CUDA_CHECK;
 }
 
 
