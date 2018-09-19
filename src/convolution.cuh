@@ -14,7 +14,7 @@ void createConvolutionKernel(float *kernel, int kradius, float sigma);
 void computeConvolution(float *imgOut, const float *imgIn, const float *kernel, int kradius, int w, int h, int nc);
 
 void computeConvolutionTextureMemCuda(float *imgOut, const float *imgIn, const float *kernel, int kradius, int w, int h, int nc);
-void computeConvolutionSharedMemCuda(float *imgOut, const float *imgIn, const float *kernel, int kradius, int w, int h, int nc);
+void computeConvolutionSharedMemCuda(float *imgOut, const float *imgIn, const float *kernel, const float *kernel_cpu, int kradius, int w, int h, int nc);
 void computeConvolutionGlobalMemCuda(float *imgOut, const float *imgIn, const float *kernel, int kradius, int w, int h, int nc);
 
 #endif

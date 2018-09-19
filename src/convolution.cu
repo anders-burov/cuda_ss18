@@ -10,6 +10,8 @@
 
 
 // TODO (6.3) define constant memory for convolution kernel
+#define KERNEL_MAX 41 // max diameter for constant kernel
+__constant__ float constKernel[KERNEL_MAX*KERNEL_MAX];
 
 // TODO (6.2) define texture for image
 texture<float,2,cudaReadModeElementType> texRef;
@@ -85,7 +87,11 @@ void computeConvolutionSharedMemKernel(float *imgOut, const float *imgIn, const 
             {
                 for (int i = 0; i < kdiameter; i++)
                 {
-                   imgOut[idx] += shared[(threadIdx.y+j)*sm_x+(threadIdx.x+i)] * kernel[j*kdiameter+i];
+                   //kernel from the global memory
+                   //imgOut[idx] += shared[(threadIdx.y+j)*sm_x+(threadIdx.x+i)] * kernel[j*kdiameter+i];
+
+                   //kernel from the constant memory
+                   imgOut[idx] += shared[(threadIdx.y+j)*sm_x+(threadIdx.x+i)] * constKernel[j*KERNEL_MAX+i];
                 }
             }
         }
@@ -210,13 +216,31 @@ void computeConvolutionTextureMemCuda(float *imgOut, const float *imgIn, const f
 }
 
 
-void computeConvolutionSharedMemCuda(float *imgOut, const float *imgIn, const float *kernel, int kradius, int w, int h, int nc)
+void computeConvolutionSharedMemCuda(float *imgOut, const float *imgIn, const float *kernel, const float *kernel_cpu, int kradius, int w, int h, int nc)
 {
     if (!imgOut || !imgIn)
     {
         std::cerr << "arrays not allocated!" << std::endl;
         return;
     }
+
+    int kdiameter = 2*kradius+1;
+
+    if (KERNEL_MAX < kdiameter)
+    {
+        std::cerr << "kernel diameter bigger than the allowed size!" << std::endl;
+        return;
+    }
+
+    float *kernel_pitched = new float[KERNEL_MAX*KERNEL_MAX];
+    for (int j = 0; j < kdiameter; j++)
+    {
+        for (int i = 0; i < kdiameter; i++)
+        {
+            kernel_pitched[j*KERNEL_MAX+i] = kernel_cpu[j*kdiameter+i];
+        }
+    }
+    cudaMemcpyToSymbol(constKernel, kernel_pitched, KERNEL_MAX*KERNEL_MAX*sizeof(float));
 
     // calculate block and grid size
     dim3 block(32, 32, 1);     // TODO (6.1) specify suitable block size
@@ -234,6 +258,8 @@ void computeConvolutionSharedMemCuda(float *imgOut, const float *imgIn, const fl
     // check for errors
     // TODO (6.1)
     CUDA_CHECK;
+
+    delete[] kernel_pitched;
 }
 
 

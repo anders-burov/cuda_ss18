@@ -163,7 +163,7 @@ int main(int argc,char **argv)
                 {
                     // shared memory
                     // TODO (6.1) implement computeConvolutionSharedMemCuda() in convolution.cu
-                    computeConvolutionSharedMemCuda(d_imgOut, d_imgIn, d_kernel, kradius, w, h, nc);
+                    computeConvolutionSharedMemCuda(d_imgOut, d_imgIn, d_kernel, kernel, kradius, w, h, nc);
                 }
                 else if (memory == 2)
                 {
