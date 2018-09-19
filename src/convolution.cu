@@ -240,7 +240,7 @@ void computeConvolutionSharedMemCuda(float *imgOut, const float *imgIn, const fl
             kernel_pitched[j*KERNEL_MAX+i] = kernel_cpu[j*kdiameter+i];
         }
     }
-    cudaMemcpyToSymbol(constKernel, kernel_pitched, KERNEL_MAX*KERNEL_MAX*sizeof(float));
+    cudaMemcpyToSymbol(constKernel, kernel_pitched, KERNEL_MAX*KERNEL_MAX*sizeof(float)); CUDA_CHECK;
 
     // calculate block and grid size
     dim3 block(32, 32, 1);     // TODO (6.1) specify suitable block size
