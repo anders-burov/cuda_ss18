@@ -88,10 +88,10 @@ void computeConvolutionSharedMemKernel(float *imgOut, const float *imgIn, const 
                 for (int i = 0; i < kdiameter; i++)
                 {
                    //kernel from the global memory
-                   //imgOut[idx] += shared[(threadIdx.y+j)*sm_x+(threadIdx.x+i)] * kernel[j*kdiameter+i];
+                   imgOut[idx] += shared[(threadIdx.y+j)*sm_x+(threadIdx.x+i)] * kernel[j*kdiameter+i];
 
                    //kernel from the constant memory
-                   imgOut[idx] += shared[(threadIdx.y+j)*sm_x+(threadIdx.x+i)] * constKernel[j*KERNEL_MAX+i];
+                   //imgOut[idx] += shared[(threadIdx.y+j)*sm_x+(threadIdx.x+i)] * constKernel[j*KERNEL_MAX+i];
                 }
             }
         }
@@ -226,21 +226,21 @@ void computeConvolutionSharedMemCuda(float *imgOut, const float *imgIn, const fl
 
     int kdiameter = 2*kradius+1;
 
-    if (KERNEL_MAX < kdiameter)
-    {
-        std::cerr << "kernel diameter bigger than the allowed size!" << std::endl;
-        return;
-    }
+//    if (KERNEL_MAX < kdiameter)
+//    {
+//        std::cerr << "kernel diameter bigger than the allowed size!" << std::endl;
+//        return;
+//    }
 
-    float *kernel_pitched = new float[KERNEL_MAX*KERNEL_MAX];
-    for (int j = 0; j < kdiameter; j++)
-    {
-        for (int i = 0; i < kdiameter; i++)
-        {
-            kernel_pitched[j*KERNEL_MAX+i] = kernel_cpu[j*kdiameter+i];
-        }
-    }
-    cudaMemcpyToSymbol(constKernel, kernel_pitched, KERNEL_MAX*KERNEL_MAX*sizeof(float)); CUDA_CHECK;
+//    float *kernel_pitched = new float[KERNEL_MAX*KERNEL_MAX];
+//    for (int j = 0; j < kdiameter; j++)
+//    {
+//        for (int i = 0; i < kdiameter; i++)
+//        {
+//            kernel_pitched[j*KERNEL_MAX+i] = kernel_cpu[j*kdiameter+i];
+//        }
+//    }
+//    cudaMemcpyToSymbol(constKernel, kernel_pitched, KERNEL_MAX*KERNEL_MAX*sizeof(float)); CUDA_CHECK;
 
     // calculate block and grid size
     dim3 block(32, 32, 1);     // TODO (6.1) specify suitable block size
@@ -259,7 +259,7 @@ void computeConvolutionSharedMemCuda(float *imgOut, const float *imgIn, const fl
     // TODO (6.1)
     CUDA_CHECK;
 
-    delete[] kernel_pitched;
+//    delete[] kernel_pitched;
 }
 
 

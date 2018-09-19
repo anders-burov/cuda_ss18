@@ -8,18 +8,41 @@
 #include <cuda_runtime.h>
 #include "helper.cuh"
 
-
 __global__
 void updateDiffusivityKernel(float *u, const float *d_div, int w, int h, int nc, float dt)
 {
+    int x = threadIdx.x + blockDim.x * blockIdx.x;
+    int y = threadIdx.y + blockDim.y * blockIdx.y;
+
     // TODO (9.5) update diffusivity
+    if (x >= w || y >= h) return;
+
+    u[y*w + x] += dt * d_div[y*w + x];
 }
 
 
 __global__
 void multDiffusivityKernel(float *v1, float *v2, int w, int h, int nc, float epsilon)
 {
+    int x = threadIdx.x + blockDim.x * blockIdx.x;
+    int y = threadIdx.y + blockDim.y * blockIdx.y;
+
     // TODO (9.3) multiply diffusivity
+    if (x >= w || y >= h) return;
+
+    float g = 0;
+    for (int z = 0; z < nc; z++)
+    {
+        g += v1[z*h*w + y*w + x]*v1[z*h*w + y*w + x];
+        g += v2[z*h*w + y*w + x]*v2[z*h*w + y*w + x];
+    }
+    g = 1/max(epsilon,sqrtf(g));
+
+    for (int z = 0; z < nc; z++)
+    {
+        v1[z*h*w + y*w + x] *= g;
+        v2[z*h*w + y*w + x] *= g;
+    }
 }
 
 __global__
@@ -54,28 +77,32 @@ void computeDiffusionTensorKernel(float *d_difftensor11, float *d_difftensor12, 
 void updateDiffusivityCuda(float *u, const float *d_div, int w, int h, int nc, float dt)
 {
     // calculate block and grid size
-    dim3 block(0, 0, 0);     // TODO (9.5) specify suitable block size
+    dim3 block(32, 8, nc);     // TODO (9.5) specify suitable block size
     dim3 grid = computeGrid2D(block, w, h);
 
     // run cuda kernel
     // TODO (9.5) execute kernel for updating diffusivity
+    updateDiffusivityKernel <<<grid, block>>> (u, d_div, w, h, nc, dt);
 
     // check for errors
     // TODO (9.5)
+    CUDA_CHECK;
 }
 
 
 void multDiffusivityCuda(float *v1, float *v2, int w, int h, int nc, float epsilon)
 {
     // calculate block and grid size
-    dim3 block(0, 0, 0);     // TODO (9.3) specify suitable block size
+    dim3 block(32, 8, 1);     // TODO (9.3) specify suitable block size
     dim3 grid = computeGrid2D(block, w, h);
 
     // run cuda kernel
     // TODO (9.3) execute kernel for multiplying diffusivity
+    multDiffusivityKernel <<<grid, block>>> (v1, v2, w, h, nc, epsilon);
 
     // check for errors
     // TODO (9.3)
+    CUDA_CHECK;
 }
 
 

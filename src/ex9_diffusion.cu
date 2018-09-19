@@ -73,6 +73,7 @@ int main(int argc,char **argv)
     int w = mIn.cols;         // width
     int h = mIn.rows;         // height
     int nc = mIn.channels();  // number of channels
+    int n = nc*h*w;
     std::cout << "Image: " << w << " x " << h << std::endl;
 
     // initialize CUDA context
@@ -83,9 +84,9 @@ int main(int argc,char **argv)
 
     // ### Allocate arrays
     // allocate raw input image array
-    float *imgIn = NULL;    // TODO allocate array
+    float *imgIn = new float[n];
     // allocate raw output array (the computation result will be stored in this array, then later converted to mOut for displaying)
-    float *imgOut = NULL;    // TODO allocate array
+    float *imgOut = new float[n];
 
     // allocate arrays on GPU
     float *d_imgIn = NULL;
@@ -93,6 +94,10 @@ int main(int argc,char **argv)
     float *d_v2 = NULL;
     float *d_div = NULL;
     // TODO alloc cuda memory for device arrays
+    cudaMalloc(&d_imgIn, n* sizeof(float)); CUDA_CHECK;
+    cudaMalloc(&d_v1, n* sizeof(float)); CUDA_CHECK;
+    cudaMalloc(&d_v2, n* sizeof(float)); CUDA_CHECK;
+    cudaMalloc(&d_div, n* sizeof(float)); CUDA_CHECK;
 
     do
     {
@@ -109,12 +114,16 @@ int main(int argc,char **argv)
         for(size_t i = 0; i < iter; ++i)
         {
             // TODO (9.1) compute gradient of d_imgIn using computeGradientCuda() in gradient.cu
+            computeGradientCuda(d_v1, d_v2, d_imgIn, w, h, nc);
+            cudaDeviceSynchronize();
 
             // TODO (9.3) implement multDiffusivityCuda() in diffusion.cu
             multDiffusivityCuda(d_v1, d_v2, w, h, nc, epsilon);
             cudaDeviceSynchronize();
 
             // TODO (9.4) compute divergence of d_v1, d_v2 using computeDivergenceCuda() in divergence.cu
+            computeDivergenceCuda(d_div, d_v1, d_v2, w, h, nc);
+            cudaDeviceSynchronize();
 
             // TODO (9.5) implement updateDiffusivityCuda() in diffusion.cu
             updateDiffusivityCuda(d_imgIn, d_div, w, h, nc, dt);
@@ -126,6 +135,7 @@ int main(int argc,char **argv)
 
         // download from GPU
         // TODO download from device arrays to host arrays
+        cudaMemcpy(imgOut, d_imgIn, n* sizeof(float), cudaMemcpyDeviceToHost); CUDA_CHECK;
 
         // show input image
         showImage("Input", mIn, 100, 100);  // show at position (x_from_left=100,y_from_above=100)
@@ -163,7 +173,14 @@ int main(int argc,char **argv)
 
     // ### Free allocated arrays
     // TODO free cuda memory of all device arrays
+    cudaFree(d_imgIn);
+    cudaFree(d_v1);
+    cudaFree(d_v2);
+    cudaFree(d_div);
+
     // TODO free memory of all host arrays
+    delete[] imgIn;
+    delete[] imgOut;
 
     // close all opencv windows
     cv::destroyAllWindows();
