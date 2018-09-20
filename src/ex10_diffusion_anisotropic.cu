@@ -199,9 +199,9 @@ int main(int argc,char **argv)
         cudaThreadSynchronize();
 
         // TODO (10.1) blur tensor images (d_tensor11Nonsmooth etc) using computeConvolutionGlobalMemCuda(), result in d_tensor11 etc
-        computeConvolutionGlobalMemCuda(d_tensor11, d_tensor11Nonsmooth, d_kernelGauss, kradius, w, h, 1);
-        computeConvolutionGlobalMemCuda(d_tensor12, d_tensor12Nonsmooth, d_kernelGauss, kradius, w, h, 1);
-        computeConvolutionGlobalMemCuda(d_tensor22, d_tensor22Nonsmooth, d_kernelGauss, kradius, w, h, 1);
+        computeConvolutionGlobalMemCuda(d_tensor11, d_tensor11Nonsmooth, d_kernelGaussTensor, kradius2, w, h, 1);
+        computeConvolutionGlobalMemCuda(d_tensor12, d_tensor12Nonsmooth, d_kernelGaussTensor, kradius2, w, h, 1);
+        computeConvolutionGlobalMemCuda(d_tensor22, d_tensor22Nonsmooth, d_kernelGaussTensor, kradius2, w, h, 1);
         cudaThreadSynchronize();
 
         // compute diffusion tensor
@@ -235,6 +235,10 @@ int main(int argc,char **argv)
 
         // download from GPU
         // TODO download from device arrays to host arrays
+        cudaMemcpy(imgOut, d_imgIn, n* sizeof(float), cudaMemcpyDeviceToHost); CUDA_CHECK;
+        cudaMemcpy(outT1, d_difftensor11, h*w* sizeof(float), cudaMemcpyDeviceToHost); CUDA_CHECK;
+        cudaMemcpy(outT2, d_difftensor12, h*w* sizeof(float), cudaMemcpyDeviceToHost); CUDA_CHECK;
+        cudaMemcpy(outT3, d_difftensor22, h*w* sizeof(float), cudaMemcpyDeviceToHost); CUDA_CHECK;
 
         // show input image
         showImage("Input", mIn, 100, 100);  // show at position (x_from_left=100,y_from_above=100)
@@ -279,7 +283,35 @@ int main(int argc,char **argv)
 
     // ### Free allocated arrays
     // TODO free cuda memory of all device arrays
+    cudaFree(d_imgIn); CUDA_CHECK;
+    cudaFree(d_v1); CUDA_CHECK;
+    cudaFree(d_v2); CUDA_CHECK;
+    cudaFree(d_div); CUDA_CHECK;
+    cudaFree(d_inSmooth); CUDA_CHECK;
+    cudaFree(d_dx); CUDA_CHECK;
+    cudaFree(d_dy); CUDA_CHECK;
+    cudaFree(d_tensor11Nonsmooth); CUDA_CHECK;
+    cudaFree(d_tensor12Nonsmooth); CUDA_CHECK;
+    cudaFree(d_tensor22Nonsmooth); CUDA_CHECK;
+    cudaFree(d_tensor11); CUDA_CHECK;
+    cudaFree(d_tensor12); CUDA_CHECK;
+    cudaFree(d_tensor22); CUDA_CHECK;
+    cudaFree(d_difftensor11); CUDA_CHECK;
+    cudaFree(d_difftensor12); CUDA_CHECK;
+    cudaFree(d_difftensor22); CUDA_CHECK;
+    cudaFree(d_kernelGauss); CUDA_CHECK;
+    cudaFree(d_kernelGaussTensor); CUDA_CHECK;
+    cudaFree(d_kernelDx); CUDA_CHECK;
+    cudaFree(d_kernelDy); CUDA_CHECK;
+
     // TODO free memory of all host arrays
+    delete[] imgIn;
+    delete[] imgOut;
+    delete[] outT1;
+    delete[] outT2;
+    delete[] outT3;
+    delete[] kernelGauss;
+    delete[] kernelGaussTensor;
 
     // close all opencv windows
     cv::destroyAllWindows();

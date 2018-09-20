@@ -132,12 +132,20 @@ void createConvolutionKernel(float *kernel, int kradius, float sigma)
 {
     // TODO (5.1) fill convolution kernel
     int kdiagonal = 2*kradius+1;
+    float sum = 0;
+
     for (int j = -kradius; j <= kradius; j++)
     {
         for (int i = -kradius; i <= kradius; i++)
         {
-            kernel[(j+kradius)*kdiagonal+(i+kradius)] = expf(-(i*i+j*j)/(2*sigma*sigma))/(2*PI*sigma*sigma);
+            kernel[(j+kradius)*kdiagonal+(i+kradius)] = expf(-(i*i+j*j)/(2*sigma*sigma)); // /(2*PI*sigma*sigma); would work for continuous case, not for discrete
+            sum += kernel[(j+kradius)*kdiagonal+(i+kradius)];
         }
+    }
+
+    for (int i = 0; i < kdiagonal*kdiagonal; i++)
+    {
+        kernel[i] /= sum;
     }
 }
 
