@@ -146,8 +146,9 @@ int main(int argc,char **argv)
         convertLayeredToMat(mOut_v, imgOut_v);
         convertLayeredToMat(mOut_w, imgOut_w);
         convertLayeredToMat(mOut_lapNorm, imgOut_lapNorm);
-        showImage("gradient x", mOut_u, 100, 80+h+40);
-        showImage("gradient y", mOut_v, 100+w/2 + 40, 80+h+40);
+        showImage("gradient x", mOut_u*10, 100, 80+h+40);
+        showImage("gradient y", mOut_v*10, 100+w/2 + 40, 80+h+40);
+        showImage("divergence", mOut_w*10, 100+w/2 + 40, 80+h);
         showImage("laplacian per channel", mOut_w, 100 + w + 80, 80+h+40);
         showImage("laplacian norm", mOut_lapNorm, 100 + w + 80, 80);
 

@@ -13,16 +13,17 @@ void updateDiffusivityKernel(float *u, const float *d_div, int w, int h, int nc,
 {
     int x = threadIdx.x + blockDim.x * blockIdx.x;
     int y = threadIdx.y + blockDim.y * blockIdx.y;
+    int z = threadIdx.z + blockDim.z * blockIdx.z;
 
     // TODO (9.5) update diffusivity
-    if (x >= w || y >= h) return;
+    if (x >= w || y >= h || z >= nc) return;
 
-    u[y*w + x] += dt * d_div[y*w + x];
+    u[z*h*w + y*w + x] += dt * d_div[z*h*w + y*w + x];
 }
 
 
 __global__
-void multDiffusivityKernel(float *v1, float *v2, int w, int h, int nc, float epsilon)
+void multDiffusivityKernel(float *v1, float *v2, int w, int h, int nc, float epsilon, int mode)
 {
     int x = threadIdx.x + blockDim.x * blockIdx.x;
     int y = threadIdx.y + blockDim.y * blockIdx.y;
@@ -36,7 +37,7 @@ void multDiffusivityKernel(float *v1, float *v2, int w, int h, int nc, float eps
         g += v1[z*h*w + y*w + x]*v1[z*h*w + y*w + x];
         g += v2[z*h*w + y*w + x]*v2[z*h*w + y*w + x];
     }
-    g = 1/max(epsilon,sqrtf(g));
+    g = funcDiffusivity(sqrtf(g), epsilon, mode);
 
     for (int z = 0; z < nc; z++)
     {
@@ -90,7 +91,7 @@ void updateDiffusivityCuda(float *u, const float *d_div, int w, int h, int nc, f
 }
 
 
-void multDiffusivityCuda(float *v1, float *v2, int w, int h, int nc, float epsilon)
+void multDiffusivityCuda(float *v1, float *v2, int w, int h, int nc, float epsilon, int mode)
 {
     // calculate block and grid size
     dim3 block(32, 8, 1);     // TODO (9.3) specify suitable block size
@@ -98,7 +99,7 @@ void multDiffusivityCuda(float *v1, float *v2, int w, int h, int nc, float epsil
 
     // run cuda kernel
     // TODO (9.3) execute kernel for multiplying diffusivity
-    multDiffusivityKernel <<<grid, block>>> (v1, v2, w, h, nc, epsilon);
+    multDiffusivityKernel <<<grid, block>>> (v1, v2, w, h, nc, epsilon, mode);
 
     // check for errors
     // TODO (9.3)

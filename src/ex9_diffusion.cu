@@ -22,6 +22,7 @@ int main(int argc,char **argv)
         "{w|bw|false|load input image as grayscale/black-white}"
         "{n|iter|100|iterations}"
         "{e|epsilon|0.01|epsilon}"
+        "{m|mode|0|diffusivity mode}"
         "{d|dt|0.001|dt}"
     };
     cv::CommandLineParser cmd(argc, argv, params);
@@ -34,9 +35,11 @@ int main(int argc,char **argv)
     std::cout << "iterations: " << iter << std::endl;
     float epsilon = cmd.get<float>("epsilon");
     std::cout << "epsilon: " << epsilon << std::endl;
+    int mode = cmd.get<int>("mode");
+    std::cout << "mode: " << mode << std::endl;
     float dt = cmd.get<float>("dt");
     if (dt == 0.0f)
-        dt = 0.225f/funcDiffusivity(0, epsilon, 1);
+        dt = 0.225f/funcDiffusivity(0, epsilon, mode);
     std::cout << "dt: " << dt << std::endl;
 
     // init camera
@@ -81,12 +84,18 @@ int main(int argc,char **argv)
 
     // ### Set the output image format
     cv::Mat mOut(h,w,mIn.type());  // grayscale or color depending on input image, nc layers
+    cv::Mat mDiv(h,w,mIn.type());
+    cv::Mat mV1(h,w,mIn.type());
+    cv::Mat mV2(h,w,mIn.type());
 
     // ### Allocate arrays
     // allocate raw input image array
     float *imgIn = new float[n];
     // allocate raw output array (the computation result will be stored in this array, then later converted to mOut for displaying)
     float *imgOut = new float[n];
+    float *div = new float[n];
+    float *v1 = new float[n];
+    float *v2 = new float[n];
 
     // allocate arrays on GPU
     float *d_imgIn = NULL;
@@ -108,6 +117,7 @@ int main(int argc,char **argv)
         convertMatToLayered (imgIn, mIn);
         // upload to GPU
         // TODO copy from imgIn to d_imgIn
+        cudaMemcpy(d_imgIn, imgIn, n * sizeof(float), cudaMemcpyHostToDevice); CUDA_CHECK;
 
         Timer timer;
         timer.start();
@@ -118,7 +128,7 @@ int main(int argc,char **argv)
             cudaDeviceSynchronize();
 
             // TODO (9.3) implement multDiffusivityCuda() in diffusion.cu
-            multDiffusivityCuda(d_v1, d_v2, w, h, nc, epsilon);
+            multDiffusivityCuda(d_v1, d_v2, w, h, nc, epsilon, mode);
             cudaDeviceSynchronize();
 
             // TODO (9.4) compute divergence of d_v1, d_v2 using computeDivergenceCuda() in divergence.cu
@@ -135,12 +145,21 @@ int main(int argc,char **argv)
 
         // download from GPU
         // TODO download from device arrays to host arrays
+        cudaMemcpy(v1, d_v1, n* sizeof(float), cudaMemcpyDeviceToHost); CUDA_CHECK;
+        cudaMemcpy(v2, d_v2, n* sizeof(float), cudaMemcpyDeviceToHost); CUDA_CHECK;
+        cudaMemcpy(div, d_div, n* sizeof(float), cudaMemcpyDeviceToHost); CUDA_CHECK;
         cudaMemcpy(imgOut, d_imgIn, n* sizeof(float), cudaMemcpyDeviceToHost); CUDA_CHECK;
 
         // show input image
         showImage("Input", mIn, 100, 100);  // show at position (x_from_left=100,y_from_above=100)
 
         // show output image: first convert to interleaved opencv format from the layered raw array
+        convertLayeredToMat(mV1, v1);
+        showImage("V1", mV1, 100+w+80, 100);
+        convertLayeredToMat(mV2, v2);
+        showImage("V2", mV2, 100+w+100, 100);
+        convertLayeredToMat(mDiv, div);
+        showImage("Div", mDiv, 100+w+60, 100);
         convertLayeredToMat(mOut, imgOut);
         showImage("Output", mOut, 100+w+40, 100);
 
@@ -181,6 +200,9 @@ int main(int argc,char **argv)
     // TODO free memory of all host arrays
     delete[] imgIn;
     delete[] imgOut;
+    delete[] div;
+    delete[] v1;
+    delete[] v2;
 
     // close all opencv windows
     cv::destroyAllWindows();

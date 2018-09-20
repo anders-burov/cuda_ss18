@@ -79,28 +79,29 @@ int main(int argc,char **argv)
     mIn.convertTo(mIn, CV_32F);
 
     // init kernels
-    int kradius2 = 0;    // TODO calculate kernel radius using rho
+    int kradius2 = ceil(3*rho);    // TODO calculate kernel radius using rho
     std::cout << "kradius2: " << kradius2 << std::endl;
-    int k_diameter2 = 0;     // TODO calculate kernel diameter from radius
+    int k_diameter2 = kradius2*2+1;     // TODO calculate kernel diameter from radius
     int kn2 = k_diameter2*k_diameter2;
-    float *kernelGaussTensor = NULL;    // TODO allocate array
+    float *kernelGaussTensor = new float[kn2 * sizeof(float)];    // TODO allocate array
     createConvolutionKernel(kernelGaussTensor, kradius2, rho);
 
-    int kradius = 0;    // TODO calculate kernel radius using sigma
+    int kradius = ceil(3*sigma);    // TODO calculate kernel radius using sigma
     std::cout << "kradius: " << kradius << std::endl;
-    int k_diameter = 0;     // TODO calculate kernel diameter from radius
+    int k_diameter = kradius*2+1;     // TODO calculate kernel diameter from radius
     int kn = k_diameter*k_diameter;
-    float *kernelGauss = NULL;    // TODO allocate array
+    float *kernelGauss = new float[kn * sizeof(float)];    // TODO allocate array
     createConvolutionKernel(kernelGauss, kradius, sigma);
 
     // gradient convolution kernels
-    float kernelDx[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};    // TODO fill
-    float kernelDy[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};    // TODO fill
+    float kernelDx[9] = {-3/32.f, 0.f, 3/32.f, -10/32.f, 0.f, 10/32.f, -3/32.f, 0.f, 3/32.f};    // TODO fill
+    float kernelDy[9] = {-3/32.f, -10/32.f, -3/32.f, 0.f, 0.f, 0.f, 3/32.f, 10/32.f, 3/32.f};    // TODO fill
 
     // get image dimensions
     int w = mIn.cols;         // width
     int h = mIn.rows;         // height
     int nc = mIn.channels();  // number of channels
+    int n = nc * h * w;
     std::cout << "Image: " << w << " x " << h << std::endl;
 
     // initialize CUDA context
@@ -114,12 +115,12 @@ int main(int argc,char **argv)
 
     // ### Allocate arrays
     // allocate raw input image array
-    float *imgIn = NULL;    // TODO allocate array
+    float *imgIn = new float[n];    // TODO allocate array
     // allocate raw output array (the computation result will be stored in this array, then later converted to mOut for displaying)
-    float *imgOut = NULL;    // TODO allocate array
-    float *outT1 = NULL;    // TODO allocate array
-    float *outT2 = NULL;    // TODO allocate array
-    float *outT3 = NULL;    // TODO allocate array
+    float *imgOut = new float[n];    // TODO allocate array
+    float *outT1 = new float[h*w];    // TODO allocate array
+    float *outT2 = new float[h*w];    // TODO allocate array
+    float *outT3 = new float[h*w];    // TODO allocate array
 
     // allocate arrays on GPU
     float *d_imgIn = NULL;
@@ -144,6 +145,17 @@ int main(int argc,char **argv)
     float *d_difftensor22 = NULL;
 
     // TODO alloc cuda memory for device arrays
+//    cudaMalloc(d_imgIn, n *sizeof(float));
+//    cudaMalloc(d_v1, n *sizeof(float));
+//    cudaMalloc(d_v2, n *sizeof(float));
+//    cudaMalloc(d_div, n *sizeof(float));
+//    cudaMalloc(d_kernelGauss, kn *sizeof(float));
+//    cudaMalloc(d_imgIn, n *sizeof(float));
+//    cudaMalloc(d_imgIn, n *sizeof(float));
+//    cudaMalloc(d_imgIn, n *sizeof(float));
+//    cudaMalloc(d_imgIn, n *sizeof(float));
+//    cudaMalloc(d_imgIn, n *sizeof(float));
+//    cudaMalloc(d_imgIn, n *sizeof(float));
 
     // TODO allocate and upload convolution kernels
 

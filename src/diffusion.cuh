@@ -13,21 +13,21 @@ inline float funcDiffusivity(float x, float eps, int mode)
 {
     if (mode == 1)
     {
-        return 0.0f;        // TODO (9.8) max diffusivity function
+        return 1/max(eps,x);        // TODO (9.8) max diffusivity function
     }
     else if (mode == 2)
     {
-        return 0.0f;        // TODO (9.8) exponential diffusivity function
+        return expf(-x*x/eps)/eps;        // TODO (9.8) exponential diffusivity function
     }
     else
     {
-        return 0.0f;        // TODO (9.2) constant diffusivity function
+        return 1.0f;        // TODO (9.2) constant diffusivity function
     }
 }
 
 void updateDiffusivityCuda(float *u, const float *d_div, int w, int h, int nc, float dt);
 
-void multDiffusivityCuda(float *v1, float *v2, int w, int h, int nc, float epsilon);
+void multDiffusivityCuda(float *v1, float *v2, int w, int h, int nc, float epsilon, int mode);
 
 void multDiffusivityAnisotropicCuda(float *v1, float *v2, float *g11, float *g12, float *g22, int w, int h, int nc);
 
