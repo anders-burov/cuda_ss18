@@ -67,9 +67,23 @@ void multDiffusivityAnisotropicKernel(float *v1, float *v2, float *g11, float *g
 
 
 __global__
-void computeDiffusivityKernel(float *diffusivity, const float *u, int w, int h, int nc, float epsilon)
+void computeDiffusivityKernel(float *diffusivity, const float *v1, const float *v2, int w, int h, int nc, float epsilon)
 {
     // TODO (11.2) compute diffusivity
+    int x = threadIdx.x + blockDim.x * blockIdx.x;
+    int y = threadIdx.y + blockDim.y * blockIdx.y;
+
+    if (x >= w || y >= h) return;
+
+    float g = 0;
+    for (int z = 0; z < nc; z++)
+    {
+        int idx = z*h*w + y*w + x;
+        g += v1[idx]*v1[idx];
+        g += v2[idx]*v2[idx];
+    }
+
+    diffusivity[y*w + x] = 1/max(epsilon,sqrtf(g));
 }
 
 __device__
@@ -181,17 +195,19 @@ void multDiffusivityAnisotropicCuda(float *v1, float *v2, float *g11, float *g12
 }
 
 
-void computeDiffusivityCuda(float *diffusivity, const float *u, int w, int h, int nc, float epsilon)
+void computeDiffusivityCuda(float *diffusivity, const float *v1, const float *v2, int w, int h, int nc, float epsilon)
 {
     // calculate block and grid size
-    dim3 block(0, 0, 0);     // TODO (11.2) specify suitable block size
+    dim3 block(32, 8, 1);     // TODO (11.2) specify suitable block size
     dim3 grid = computeGrid2D(block, w, h);
 
     // run cuda kernel
     // TODO (11.2) execute kernel for computing diffusivity
+    computeDiffusivityKernel <<<grid, block>>> (diffusivity, v1, v2, w, h, nc, epsilon);
 
     // check for errors
     // TODO (11.2)
+    CUDA_CHECK;
 }
 
 

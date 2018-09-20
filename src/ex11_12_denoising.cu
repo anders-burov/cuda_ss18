@@ -8,6 +8,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
+#include "gradient.cuh"
 #include "helper.cuh"
 #include "diffusion.cuh"
 #include "energy.cuh"
@@ -96,6 +97,7 @@ int main(int argc,char **argv)
     int w = mIn.cols;         // width
     int h = mIn.rows;         // height
     int nc = mIn.channels();  // number of channels
+    int n = nc*h*w;
     std::cout << "Image: " << w << " x " << h << std::endl;
 
     // initialize CUDA context
@@ -106,9 +108,9 @@ int main(int argc,char **argv)
 
     // ### Allocate arrays
     // allocate raw input image array
-    float *imgIn = NULL;    // TODO allocate array
+    float *imgIn = new float[n];    // TODO allocate array
     // allocate raw output array (the computation result will be stored in this array, then later converted to mOut for displaying)
-    float *imgOut = NULL;    // TODO allocate array
+    float *imgOut = new float[n];    // TODO allocate array
 
     // allocate arrays on GPU
     // input
@@ -116,8 +118,17 @@ int main(int argc,char **argv)
     // temp
     float *d_imgIn = NULL;
     float *d_imgOut = NULL;
+    float *d_v1 = NULL;
+    float *d_v2 = NULL;
     float *d_diffusivity = NULL;    // TODO allocate array
     float *d_energy = NULL;    // TODO allocate array
+
+    cudaMalloc(&d_imgData, n *sizeof(float)); CUDA_CHECK;
+    cudaMalloc(&d_imgIn, n *sizeof(float)); CUDA_CHECK;
+    cudaMalloc(&d_imgOut, n *sizeof(float)); CUDA_CHECK;
+    cudaMalloc(&d_v1, n *sizeof(float)); CUDA_CHECK;
+    cudaMalloc(&d_v2, n *sizeof(float)); CUDA_CHECK;
+    cudaMalloc(&d_diffusivity, h*w *sizeof(float)); CUDA_CHECK;
 
     // create cublas handle
     cublasHandle_t handle;
@@ -130,12 +141,16 @@ int main(int argc,char **argv)
 
         // add noise to input image
         // TODO (11.1)
+        addNoise(mIn, noise);
 
         // init raw input image array (and convert to layered)
         convertMatToLayered (imgIn, mIn);
 
         // fixed input image
         // TODO upload input to device and copy to working image
+        cudaMemcpy(d_imgIn, imgIn, n * sizeof(float), cudaMemcpyHostToDevice); CUDA_CHECK;
+        cudaMemcpy(d_imgData, imgIn, n * sizeof(float), cudaMemcpyHostToDevice); CUDA_CHECK;
+
 
         Timer timer;
         timer.start();
@@ -145,7 +160,8 @@ int main(int argc,char **argv)
         for(size_t i = 0; i < iter; ++i)
         {
             // TODO (11.2) compute diffusivity using computeDiffusivityCuda() in diffusion.cu
-            computeDiffusivityCuda(d_diffusivity, a_in, w, h, nc, epsilon);  CUDA_CHECK;
+            computeGradientCuda(d_v1, d_v2, a_in, w, h, nc); CUDA_CHECK;
+            computeDiffusivityCuda(d_diffusivity, d_v1, d_v2, w, h, nc, epsilon);  CUDA_CHECK;
 
             // if jacobi
             if (jacobiStep)
@@ -176,6 +192,7 @@ int main(int argc,char **argv)
 
         // download from GPU
         // TODO copy all necessary arrays from device to host
+        cudaMemcpy(imgOut, a_out, n* sizeof(float), cudaMemcpyDeviceToHost); CUDA_CHECK;
 
         // show input image
         showImage("Input", mIn, 100, 100);  // show at position (x_from_left=100,y_from_above=100)
@@ -213,7 +230,16 @@ int main(int argc,char **argv)
 
     // ### Free allocated arrays
     // TODO free cuda memory of all device arrays
+    cudaFree(d_imgData); CUDA_CHECK;
+    cudaFree(d_imgIn); CUDA_CHECK;
+    cudaFree(d_imgOut); CUDA_CHECK;
+    cudaFree(d_v1); CUDA_CHECK;
+    cudaFree(d_v2); CUDA_CHECK;
+    cudaFree(d_diffusivity); CUDA_CHECK;
+
     // TODO free memory of all host arrays
+    delete[] imgIn;
+    delete[] imgOut;
 
     // close all opencv windows
     cv::destroyAllWindows();

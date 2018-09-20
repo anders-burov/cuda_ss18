@@ -170,6 +170,8 @@ int main(int argc,char **argv)
 
     cudaMemcpy(d_kernelGauss, kernelGauss, kn * sizeof(float), cudaMemcpyHostToDevice); CUDA_CHECK;
     cudaMemcpy(d_kernelGaussTensor, kernelGaussTensor, kn2 * sizeof(float), cudaMemcpyHostToDevice); CUDA_CHECK;
+    cudaMemcpy(d_kernelDx, kernelDx, 9 *sizeof(float), cudaMemcpyHostToDevice); CUDA_CHECK;
+    cudaMemcpy(d_kernelDy, kernelDy, 9 *sizeof(float), cudaMemcpyHostToDevice); CUDA_CHECK;
 
     do
     {
@@ -235,7 +237,7 @@ int main(int argc,char **argv)
 
         // download from GPU
         // TODO download from device arrays to host arrays
-        cudaMemcpy(imgOut, d_imgIn, n* sizeof(float), cudaMemcpyDeviceToHost); CUDA_CHECK;
+        cudaMemcpy(imgOut, d_dy, n* sizeof(float), cudaMemcpyDeviceToHost); CUDA_CHECK;
         cudaMemcpy(outT1, d_difftensor11, h*w* sizeof(float), cudaMemcpyDeviceToHost); CUDA_CHECK;
         cudaMemcpy(outT2, d_difftensor12, h*w* sizeof(float), cudaMemcpyDeviceToHost); CUDA_CHECK;
         cudaMemcpy(outT3, d_difftensor22, h*w* sizeof(float), cudaMemcpyDeviceToHost); CUDA_CHECK;
@@ -244,15 +246,15 @@ int main(int argc,char **argv)
         showImage("Input", mIn, 100, 100);  // show at position (x_from_left=100,y_from_above=100)
         // show output image: first convert to interleaved opencv format from the layered raw array
         convertLayeredToMat(mOut, imgOut);
-        showImage("Output", mOut, 100+w+40, 100);
+        showImage("Output", mOut*10, 100+w+40, 100);
 
         // show tensor
         convertLayeredToMat(mOutT1, outT1);
         convertLayeredToMat(mOutT2, outT2);
         convertLayeredToMat(mOutT3, outT3);
-        showImage("t11", mOutT1, 100+2*w+40, 100);
-        showImage("t12", mOutT2, 100+2*w+40, 100+h+10);
-        showImage("t22", mOutT3, 100+w+40, 100+h+10);
+        showImage("t11", mOutT1*300, 100+2*w+40, 100);
+        showImage("t12", mOutT2*300, 100+2*w+40, 100+h+10);
+        showImage("t22", mOutT3*300, 100+w+40, 100+h+10);
 
         if (useCam)
         {

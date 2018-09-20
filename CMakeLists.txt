@@ -116,6 +116,7 @@ TARGET_LINK_LIBRARIES(ex10_diffusion_anisotropic ${OpenCV_LIBS})
 
 # exercise 11/12: denoising + reduction
 CUDA_ADD_EXECUTABLE(ex11_12_denoising
+        src/gradient.cuh src/gradient.cu
         src/helper.cuh src/helper.cu
         src/diffusion.cuh src/diffusion.cu
         src/energy.cuh src/energy.cu

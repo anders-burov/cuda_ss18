@@ -31,7 +31,7 @@ void multDiffusivityCuda(float *v1, float *v2, int w, int h, int nc, float epsil
 
 void multDiffusivityAnisotropicCuda(float *v1, float *v2, float *g11, float *g12, float *g22, int w, int h, int nc);
 
-void computeDiffusivityCuda(float *diffusivity, const float *u, int w, int h, int nc, float epsilon);
+void computeDiffusivityCuda(float *diffusivity, const float *v1, const float *v2, int w, int h, int nc, float epsilon);
 
 void computeDiffusionTensorCuda(float *d_difftensor11, float *d_difftensor12, float *d_difftensor22,
                                 float *d_tensor11, float *d_tensor12, float *d_tensor22,

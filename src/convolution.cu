@@ -232,8 +232,6 @@ void computeConvolutionSharedMemCuda(float *imgOut, const float *imgIn, const fl
         return;
     }
 
-    int kdiameter = 2*kradius+1;
-
 //    if (KERNEL_MAX < kdiameter)
 //    {
 //        std::cerr << "kernel diameter bigger than the allowed size!" << std::endl;
