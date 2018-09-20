@@ -17,21 +17,6 @@ void computeGradientKernel(float *u, float *v, const float *imgIn, int w, int h,
     int y = threadIdx.y + blockDim.y * blockIdx.y;
     int z = threadIdx.z + blockDim.z * blockIdx.z;
 
-//    // x-direction
-//    if (x + 1 < w && y < h)
-//    {
-//        int idx = z*h*w + y*w + x;
-//        int idx1 = z*h*w + y*w + x+1;
-//        u[idx] = imgIn[idx1] - imgIn[idx];
-//    }
-
-//    // y-direction
-//    if (x < w && y+1 < h)
-//    {
-//        int idx = z*h*w + y*w + x;
-//        int idx1 = z*h*w + (y+1)*w + x;
-//        v[idx] = imgIn[idx1] - imgIn[idx];
-//    }
     if (x < w && y < h)
     {
         int idx = z*h*w + y*w + x;

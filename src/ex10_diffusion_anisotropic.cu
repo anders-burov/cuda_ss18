@@ -145,19 +145,31 @@ int main(int argc,char **argv)
     float *d_difftensor22 = NULL;
 
     // TODO alloc cuda memory for device arrays
-//    cudaMalloc(d_imgIn, n *sizeof(float));
-//    cudaMalloc(d_v1, n *sizeof(float));
-//    cudaMalloc(d_v2, n *sizeof(float));
-//    cudaMalloc(d_div, n *sizeof(float));
-//    cudaMalloc(d_kernelGauss, kn *sizeof(float));
-//    cudaMalloc(d_imgIn, n *sizeof(float));
-//    cudaMalloc(d_imgIn, n *sizeof(float));
-//    cudaMalloc(d_imgIn, n *sizeof(float));
-//    cudaMalloc(d_imgIn, n *sizeof(float));
-//    cudaMalloc(d_imgIn, n *sizeof(float));
-//    cudaMalloc(d_imgIn, n *sizeof(float));
+    cudaMalloc(&d_imgIn, n *sizeof(float)); CUDA_CHECK;
+    cudaMalloc(&d_v1, n *sizeof(float)); CUDA_CHECK;
+    cudaMalloc(&d_v2, n *sizeof(float)); CUDA_CHECK;
+    cudaMalloc(&d_div, n *sizeof(float)); CUDA_CHECK;
+    cudaMalloc(&d_inSmooth, n *sizeof(float)); CUDA_CHECK;
+    cudaMalloc(&d_dx, n *sizeof(float)); CUDA_CHECK;
+    cudaMalloc(&d_dy, n *sizeof(float)); CUDA_CHECK;
+    cudaMalloc(&d_tensor11Nonsmooth, h*w *sizeof(float)); CUDA_CHECK;
+    cudaMalloc(&d_tensor12Nonsmooth, h*w *sizeof(float)); CUDA_CHECK;
+    cudaMalloc(&d_tensor22Nonsmooth, h*w *sizeof(float)); CUDA_CHECK;
+    cudaMalloc(&d_tensor11, h*w *sizeof(float)); CUDA_CHECK;
+    cudaMalloc(&d_tensor12, h*w *sizeof(float)); CUDA_CHECK;
+    cudaMalloc(&d_tensor22, h*w *sizeof(float)); CUDA_CHECK;
+    cudaMalloc(&d_difftensor11, h*w *sizeof(float)); CUDA_CHECK;
+    cudaMalloc(&d_difftensor12, h*w *sizeof(float)); CUDA_CHECK;
+    cudaMalloc(&d_difftensor22, h*w *sizeof(float)); CUDA_CHECK;
 
     // TODO allocate and upload convolution kernels
+    cudaMalloc(&d_kernelGauss, kn *sizeof(float)); CUDA_CHECK;
+    cudaMalloc(&d_kernelGaussTensor, kn2 *sizeof(float)); CUDA_CHECK;
+    cudaMalloc(&d_kernelDx, 9 *sizeof(float)); CUDA_CHECK;
+    cudaMalloc(&d_kernelDy, 9 *sizeof(float)); CUDA_CHECK;
+
+    cudaMemcpy(d_kernelGauss, kernelGauss, kn * sizeof(float), cudaMemcpyHostToDevice); CUDA_CHECK;
+    cudaMemcpy(d_kernelGaussTensor, kernelGaussTensor, kn2 * sizeof(float), cudaMemcpyHostToDevice); CUDA_CHECK;
 
     do
     {
@@ -168,21 +180,28 @@ int main(int argc,char **argv)
         convertMatToLayered (imgIn, mIn);
         // upload to GPU
         // TODO copy from imgIn to d_imgIn
+        cudaMemcpy(d_imgIn, imgIn, n * sizeof(float), cudaMemcpyHostToDevice); CUDA_CHECK;
 
         // TODO (10.1) smooth d_imgIn using d_kernelGauss (result in d_inSmooth)
+        computeConvolutionGlobalMemCuda(d_inSmooth, d_imgIn, d_kernelGauss, kradius, w, h, nc);
         cudaThreadSynchronize();
 
-        // smooth d_imgIn using d_kernelGauss (result in d_inSmooth)
         // TODO (10.1) compute derivatives of d_inSmooth using d_kernelDx (result in d_dx)
+        computeConvolutionGlobalMemCuda(d_dx, d_inSmooth, d_kernelDx, 1, w, h, nc);
         cudaThreadSynchronize();
         // TODO (10.1) compute derivatives of d_inSmooth using d_kernelDy (result in d_dy)
+        computeConvolutionGlobalMemCuda(d_dy, d_inSmooth, d_kernelDy, 1, w, h, nc);
         cudaThreadSynchronize();
 
         // compute tensor
         // TODO (10.1) compute structure tensor using computeStructureTensorCuda() in structure_tensor.cu
+        computeStructureTensorCuda(d_tensor11Nonsmooth, d_tensor12Nonsmooth, d_tensor22Nonsmooth, d_dx, d_dy, w, h, nc);  CUDA_CHECK;
         cudaThreadSynchronize();
 
         // TODO (10.1) blur tensor images (d_tensor11Nonsmooth etc) using computeConvolutionGlobalMemCuda(), result in d_tensor11 etc
+        computeConvolutionGlobalMemCuda(d_tensor11, d_tensor11Nonsmooth, d_kernelGauss, kradius, w, h, 1);
+        computeConvolutionGlobalMemCuda(d_tensor12, d_tensor12Nonsmooth, d_kernelGauss, kradius, w, h, 1);
+        computeConvolutionGlobalMemCuda(d_tensor22, d_tensor22Nonsmooth, d_kernelGauss, kradius, w, h, 1);
         cudaThreadSynchronize();
 
         // compute diffusion tensor
@@ -195,6 +214,7 @@ int main(int argc,char **argv)
         for(size_t i = 0; i < iter; ++i)
         {
             // TODO (10.2) compute gradient of d_imgIn using computeGradientCuda() in gradient.cu
+            computeGradientCuda(d_v1, d_v2, d_imgIn, w, h, nc);
             cudaDeviceSynchronize();
 
             // TODO (10.2) implement multDiffusivityAnisotropicCuda() in diffusion.cu
@@ -202,9 +222,11 @@ int main(int argc,char **argv)
             cudaDeviceSynchronize();
 
             // TODO (10.2) compute divergence of d_v1, d_v2 using computeDivergenceCuda() in divergence.cu
+            computeDivergenceCuda(d_div, d_v1, d_v2, w, h, nc);
             cudaDeviceSynchronize();
 
             // TODO (10.2) update d_imgIn using updateDiffusivityCuda() in diffusion.cu
+            updateDiffusivityCuda(d_imgIn, d_div, w, h, nc, dt);
             cudaDeviceSynchronize();
         }
         timer.end();

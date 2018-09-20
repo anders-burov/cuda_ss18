@@ -17,22 +17,6 @@ void computeDivergenceKernel(float *q, const float *v1, const float *v2, int w, 
     int y = threadIdx.y + blockDim.y * blockIdx.y;
     int z = threadIdx.z + blockDim.z * blockIdx.z;
 
-//    // x-direction
-//    if (x > 1 && x < w && y < h)
-//    {
-//        int idx = z*h*w + y*w + x;
-//        int idx0 = z*h*w + y*w + x-1;
-//        q[idx] = v1[idx] - v1[idx0];
-//    }
-
-//    // y-direction
-//    if (x < w && y > 1 && y < h)
-//    {
-//        int idx = z*h*w + y*w + x;
-//        int idx0 = z*h*w + (y-1)*w + x;
-//        q[idx] += v2[idx] - v2[idx0];
-//    }
-
     if (x < w && y < h)
     {
         int idx = z*h*w + y*w + x;
