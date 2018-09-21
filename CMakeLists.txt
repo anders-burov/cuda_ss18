@@ -24,7 +24,7 @@ SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 # CUDA
 FIND_PACKAGE(CUDA REQUIRED)
 SET(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-arch sm_35 -g -G -O0)
-SET(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};--ptxas-options=-v --use_fast_math --compiler-options -Wall)
+SET(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};--ptxas-options=-v --compiler-options -Wall)
 
 # OpenCV
 FIND_PACKAGE(OpenCV 2.4.8 COMPONENTS

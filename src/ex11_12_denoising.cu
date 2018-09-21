@@ -105,12 +105,15 @@ int main(int argc,char **argv)
 
     // ### Set the output image format
     cv::Mat mOut(h,w,mIn.type());  // grayscale or color depending on input image, nc layers
+    cv::Mat mEnergy(h,w, CV_32FC1);
 
     // ### Allocate arrays
     // allocate raw input image array
     float *imgIn = new float[n];    // TODO allocate array
     // allocate raw output array (the computation result will be stored in this array, then later converted to mOut for displaying)
     float *imgOut = new float[n];    // TODO allocate array
+    float *energy = new float[h*w];
+    float* energy_sum = new float[1];
 
     // allocate arrays on GPU
     // input
@@ -129,10 +132,17 @@ int main(int argc,char **argv)
     cudaMalloc(&d_v1, n *sizeof(float)); CUDA_CHECK;
     cudaMalloc(&d_v2, n *sizeof(float)); CUDA_CHECK;
     cudaMalloc(&d_diffusivity, h*w *sizeof(float)); CUDA_CHECK;
+    cudaMalloc(&d_energy, h*w *sizeof(float)); CUDA_CHECK;
 
     // create cublas handle
+    cublasStatus_t stat;
     cublasHandle_t handle;
     // TODO create handle using cublasCreate()
+    stat = cublasCreate(&handle);
+    if (stat != CUBLAS_STATUS_SUCCESS) {
+        std::cout << "CUBLAS initialization failed\n" << std::endl;
+        return EXIT_FAILURE;
+    }
 
     do
     {
@@ -180,11 +190,16 @@ int main(int argc,char **argv)
 
             // calculate energy
             // TODO (12.2) implement computeEnergyCuda() in energy.cu
-            computeEnergyCuda(d_energy, a_in, d_imgData, w, h, nc, lambda, epsilon); CUDA_CHECK;
+            computeEnergyCuda(d_energy, a_in, d_imgData, d_v1, d_v2, w, h, nc, lambda, epsilon); CUDA_CHECK;
 
-            float energy = 0.0f;
+            energy_sum[0] = 0.f;
             // TODO (12.2) compute energy from d_energy using cublasSasum()
-            std::cout << i << "," << energy << std::endl;
+            stat = cublasSasum(handle, h*w, d_energy, 1, energy_sum);
+            if (stat != CUBLAS_STATUS_SUCCESS) {
+                std::cout << "CUBLAS summation failed\n" << std::endl;
+                return EXIT_FAILURE;
+            }
+            std::cout << i << "," << energy_sum[0] << std::endl;
         }
         timer.end();
         float t = timer.get();
@@ -193,6 +208,7 @@ int main(int argc,char **argv)
         // download from GPU
         // TODO copy all necessary arrays from device to host
         cudaMemcpy(imgOut, a_out, n* sizeof(float), cudaMemcpyDeviceToHost); CUDA_CHECK;
+        cudaMemcpy(energy, d_energy, h*w* sizeof(float), cudaMemcpyDeviceToHost); CUDA_CHECK;
 
         // show input image
         showImage("Input", mIn, 100, 100);  // show at position (x_from_left=100,y_from_above=100)
@@ -200,6 +216,8 @@ int main(int argc,char **argv)
         // show output image: first convert to interleaved opencv format from the layered raw array
         convertLayeredToMat(mOut, imgOut);
         showImage("Output", mOut, 100+w+40, 100);
+        convertLayeredToMat(mEnergy, energy);
+        showImage("Energy", mEnergy, 100, 100 + h + 40);
 
         if (useCam)
         {
@@ -228,6 +246,12 @@ int main(int argc,char **argv)
         cv::imwrite("image_result.png",mOut*255.f);
     }
 
+    stat = cublasDestroy(handle);
+    if (stat != CUBLAS_STATUS_SUCCESS) {
+        std::cout << "CUBLAS destruction failed\n" << std::endl;
+        return EXIT_FAILURE;
+    }
+
     // ### Free allocated arrays
     // TODO free cuda memory of all device arrays
     cudaFree(d_imgData); CUDA_CHECK;
@@ -236,10 +260,13 @@ int main(int argc,char **argv)
     cudaFree(d_v1); CUDA_CHECK;
     cudaFree(d_v2); CUDA_CHECK;
     cudaFree(d_diffusivity); CUDA_CHECK;
+    cudaFree(d_energy); CUDA_CHECK;
 
     // TODO free memory of all host arrays
     delete[] imgIn;
     delete[] imgOut;
+    delete[] energy;
+    delete[] energy_sum;
 
     // close all opencv windows
     cv::destroyAllWindows();

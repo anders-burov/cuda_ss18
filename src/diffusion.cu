@@ -8,7 +8,7 @@
 #include <cuda_runtime.h>
 #include "helper.cuh"
 
-#define EPS2 0.000001
+#define EPS2 0.00000001
 
 __global__
 void updateDiffusivityKernel(float *u, const float *d_div, int w, int h, int nc, float dt)
@@ -97,28 +97,27 @@ void computeEigenValuesAndVectorsOfMatrix2x2(float& lambda1, float& lambda2,
     lambda1 = trace/2 + powf(trace*trace/4 - determinant, 0.5f);
     lambda2 = trace/2 - powf(trace*trace/4 - determinant, 0.5f);
 
-    if (abs(c) > EPS2)
+    if (fabsf(c) > EPS2)
     {
         v11 = lambda1 - d; v12 = c;
         v21 = lambda2 - d; v22 = c;
+
+        float s1 = sqrtf(v11*v11 + v12*v12);
+        float s2 = sqrtf(v21*v21 + v22*v22);
+
+        v11 /= s1; v12 /= s1;
+        v21 /= s2; v22 /= s2;
     }
-    else if (abs(b) > EPS2)
-    {
-        v11 = b; v12 = lambda1 - a;
-        v21 = b; v22 = lambda2 - a;
-    }
+//    else if (fabsf(b) > EPS2)
+//    {
+//        v11 = b; v12 = lambda1 - a;
+//        v21 = b; v22 = lambda2 - a;
+//    }
     else
     {
         v11 = 1; v12 = 0;
         v21 = 0; v22 = 1;
     }
-
-//    if (lambda1 < lambda2)
-//    {
-//        float temp = lambda1;
-//        lambda1 = lambda2;
-//        lambda2 = temp;
-//    }
 }
 
 __global__
@@ -139,7 +138,7 @@ void computeDiffusionTensorKernel(float *d_difftensor11, float *d_difftensor12, 
                                             d_tensor11[idx], d_tensor12[idx], d_tensor12[idx], d_tensor22[idx]);
 
     float mu1 = alpha;
-    float mu2 = (abs(lambda1 - lambda2) < EPS2) ? alpha : alpha + (1-alpha)*expf(-C/powf(lambda1-lambda2,2));
+    float mu2 = (abs(lambda1 - lambda2) < EPS2) ? alpha : alpha + (1-alpha)*expf(-C/((lambda1-lambda2)*(lambda1-lambda2)));
 
     d_difftensor11[idx] = mu1*v11*v11 + mu2*v21*v21;
     d_difftensor12[idx] = mu1*v11*v12 + mu2*v21*v22;

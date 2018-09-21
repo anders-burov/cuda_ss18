@@ -19,7 +19,7 @@ void minimizeEnergySorStepCuda(float *uOut, const float *uIn, const float *diffu
 
 void minimizeEnergyJacobiStepCuda (float *uOut, const float *uIn, const float *diffusivity, const float *imgData, int w, int h, int nc, float lambda);
 
-void computeEnergyCuda(float *d_energy, float *a_in, float *d_imgData,
+void computeEnergyCuda(float *d_energy, float *a_in, float *d_imgData, float *v1, float *v2,
                        int w, int h, int nc, float lambda, float epsilon);
 
 #endif

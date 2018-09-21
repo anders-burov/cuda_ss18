@@ -44,10 +44,28 @@ void minimizeEnergyJacobiStepKernel(float *uOut, const float *uIn, const float *
 
 
 __global__
-void computeEnergyKernel(float *d_energy, float *a_in, float *d_imgData,
+void computeEnergyKernel(float *d_energy, float *a_in, float *d_imgData, float *v1, float *v2,
                         int w, int h, int nc, float lambda, float epsilon)
 {
     // TODO (12.2) compute energy
+    int x = threadIdx.x + blockDim.x * blockIdx.x;
+    int y = threadIdx.y + blockDim.y * blockIdx.y;
+
+    if (x >= w || y >= h) return;
+
+    float norm2 = 0;
+    int idx = y*w + x;
+    d_energy[idx] = 0;
+
+    for (int z = 0; z < nc; z++)
+    {
+        norm2 += v1[z*h*w + idx]*v1[z*h*w + idx] + v2[z*h*w + idx]*v2[z*h*w + idx];
+//        d_energy[idx] += powf(fabsf(a_in[idx]-d_imgData[idx]),2);
+        d_energy[idx] += (a_in[idx]-d_imgData[idx])*(a_in[idx]-d_imgData[idx]);
+    }
+
+    float s = sqrtf(norm2);
+    d_energy[idx] += (s < epsilon) ? lambda*s*s/(2*epsilon) : lambda*(s-epsilon/2);
 }
 
 
@@ -79,16 +97,19 @@ void minimizeEnergyJacobiStepCuda(float *uOut, const float *uIn, const float *di
     CUDA_CHECK;
 }
 
-void computeEnergyCuda(float *d_energy, float *a_in, float *d_imgData,
+void computeEnergyCuda(float *d_energy, float *a_in, float *d_imgData, float *v1, float *v2,
                        int w, int h, int nc, float lambda, float epsilon)
 {
     // calculate block and grid size
-    dim3 block(0, 0, 0);     // TODO (12.2) specify suitable block size
+    dim3 block(32, 8, 1);     // TODO (12.2) specify suitable block size
     dim3 grid = computeGrid2D(block, w, h);
 
     // run cuda kernel
     // TODO (12.2) execute kernel for computing energy
+    computeEnergyKernel <<<grid, block>>> (d_energy, a_in, d_imgData, v1, v2,
+                            w, h, nc, lambda, epsilon);
 
     // check for errors
     // TODO (12.2)
+    CUDA_CHECK;
 }
