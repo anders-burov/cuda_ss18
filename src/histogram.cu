@@ -34,6 +34,27 @@ __global__
 void computeHistogramAtomicSharedMemKernel(int *histogram, float *imgIn, int w, int h, int nc)
 {
     // TODO (13.3) update histogram using atomic operations on shared memory
+    extern __shared__ float shared_histogram[];
+
+    int idx = threadIdx.x + blockDim.x * blockIdx.x;
+    if (idx >= h*w) return;
+
+    // zero-out the histogram
+    shared_histogram[threadIdx.x] = 0;
+    __syncthreads();
+
+    // compute intensity and update the histogram
+    float intensity = 0.f;
+    if (nc == 3) intensity = 0.3f*imgIn[0*h*w + idx] + 0.59f*imgIn[1*h*w + idx] + 0.11f*imgIn[2*h*w + idx];
+    else if (nc == 1) intensity = imgIn[idx];
+    else return;
+
+    int bidx = intensity*256;
+    atomicAdd(&shared_histogram[bidx], 1);
+    __syncthreads();
+
+    // update the global histogram
+    atomicAdd(&histogram[threadIdx.x], shared_histogram[threadIdx.x]);
 }
 
 
@@ -58,7 +79,7 @@ void computeHistogramCuda(int *histogram, float *imgIn, int nbins, int w, int h,
     CUDA_CHECK;
 }
 
-void computeHistogramCudaShared(int *histogram, float *imgIn, int w, int h, int nc)
+void computeHistogramCudaShared(int *histogram, float *imgIn, int nbins, int w, int h, int nc)
 {
     if (!histogram)
     {
@@ -67,12 +88,15 @@ void computeHistogramCudaShared(int *histogram, float *imgIn, int w, int h, int 
     }
 
     // calculate block and grid size
-    dim3 block(0, 0, 0);     // TODO (13.3) specify suitable block size
-    dim3 grid(0, 0, 0);      // TODO (13.3) compute grid dimensions
+    dim3 block(nbins, 1, 1);     // TODO (13.3) specify suitable block size
+    dim3 grid = computeGrid1D(block, w*h);     // TODO (13.3) compute grid dimensions
+    int smBytes = block.x*sizeof(int);
 
     // run cuda kernel
     // TODO (13.3) execute kernel for histogram update using atomic operations on shared memory
+    computeHistogramAtomicSharedMemKernel <<<grid, block, smBytes>>> (histogram, imgIn, w, h, nc);
 
     // check for errors
     // TODO (13.3)
+    CUDA_CHECK;
 }

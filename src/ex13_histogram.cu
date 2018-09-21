@@ -20,6 +20,7 @@ int main(int argc, char **argv)
         "{i|image| |input image}"
         "{b|bw|false|load input image as grayscale/black-white}"
         "{r|repeats|1|number of computation repetitions}"
+        "{m|mode|0|mode}"
     };
     cv::CommandLineParser cmd(argc, argv, params);
 
@@ -29,6 +30,7 @@ int main(int argc, char **argv)
     size_t repeats = (size_t)cmd.get<int>("repeats");
     // load the input image as grayscale
     bool gray = cmd.get<bool>("bw");
+    int mode = cmd.get<int>("mode");
 
     // init camera
     bool useCam = inputImage.empty();
@@ -112,9 +114,10 @@ int main(int argc, char **argv)
         for(size_t i = 0; i < repeats; ++i)
         {
             // TODO (13.1) implement computeHistogramCuda() in histogram.cu
-            computeHistogramCuda(d_histogram, d_imgIn, nbins, w, h, nc);
+            if (mode == 0) computeHistogramCuda(d_histogram, d_imgIn, nbins, w, h, nc);
             // TODO (13.3) implement computeHistogramCudaShared() in histogram.cu
-            //computeHistogramCudaShared(d_histogram, d_imgIn, w, h, nc);
+            else if (mode == 1) computeHistogramCudaShared(d_histogram, d_imgIn, nbins, w, h, nc);
+            else std::cerr << "mode not supported" << std::endl;
 
             cudaDeviceSynchronize();
         }
