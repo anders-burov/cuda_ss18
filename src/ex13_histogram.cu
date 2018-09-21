@@ -11,6 +11,7 @@
 #include "helper.cuh"
 #include "histogram.cuh"
 
+#define HIST_LENGTH 256
 
 int main(int argc, char **argv)
 {
@@ -63,6 +64,7 @@ int main(int argc, char **argv)
     int w = mIn.cols;         // width
     int h = mIn.rows;         // height
     int nc = mIn.channels();  // number of channels
+    int n = nc*h*w;
     std::cout << "image: " << w << " x " << h << std::endl;
 
     // initialize CUDA context
@@ -72,21 +74,26 @@ int main(int argc, char **argv)
     cv::Mat mOut(h,w,mIn.type());  // mOut will have the same number of channels as the input image, nc layers
 
     // allocate raw input image array
-    float *imgIn = NULL;    // TODO allocate array
+    float *imgIn = new float[n];    // TODO allocate array
     // allocate raw output array (the computation result will be stored in this array, then later converted to mOut for displaying)
-    float *imgOut = NULL;    // TODO allocate array
+
 
     // allocate arrays on GPU
     // input
     float *d_imgIn = NULL;
     // TODO alloc cuda memory for device arrays
+    cudaMalloc(&d_imgIn, n *sizeof(float)); CUDA_CHECK;
 
     // histogram
     int nbins = 256;
-    int *histogram = NULL;    // TODO allocate array
+    int *histogram = new int[nbins];    // TODO allocate array
     int *d_histogram = NULL;
     // TODO (13.1) alloc cuda memory for d_histogram
+    cudaMalloc(&d_histogram, nbins*sizeof(int)); CUDA_CHECK;
     // TODO (13.1) reset values of d_histogram to 0
+    memset(histogram, 0, nbins*sizeof(int));
+    cudaMemcpy(d_histogram, histogram, nbins*sizeof(int), cudaMemcpyHostToDevice); CUDA_CHECK;
+    //cudaMemset(&d_histogram, 0, nh*sizeof(int)); CUDA_CHECK;
 
     do
     {
@@ -97,6 +104,7 @@ int main(int argc, char **argv)
         convertMatToLayered(imgIn, mIn);
         // upload to GPU
         // TODO upload input to device
+        cudaMemcpy(d_imgIn, imgIn, n*sizeof(float), cudaMemcpyHostToDevice); CUDA_CHECK;
 
         Timer timer; timer.start();
 
@@ -116,11 +124,13 @@ int main(int argc, char **argv)
 
         // Copy histogram back from GPU
         // TODO copy from d_histogram to histogram
+        cudaMemcpy(histogram, d_histogram, nbins*sizeof(int), cudaMemcpyDeviceToHost); CUDA_CHECK;
 
         // show input image
         showImage("Input", mIn, 100, 100);  // show at position (x_from_left=100,y_from_above=100)
         // ### Display your own output images here as needed
         // TODO (13.2) show histogram using showHistogram256()
+        showHistogram256("Histogram", histogram, 100 + w + 40, 100);
 
         if (useCam)
         {
@@ -150,7 +160,12 @@ int main(int argc, char **argv)
 
     // free allocated arrays
     // TODO free cuda memory of all device arrays
+    cudaFree(d_imgIn);
+    cudaFree(d_histogram);
+
     // TODO free memory of all host arrays
+    delete[] imgIn;
+    delete[] histogram;
 
     // close all opencv windows
     cv::destroyAllWindows();
