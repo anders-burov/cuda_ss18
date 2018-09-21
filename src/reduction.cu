@@ -14,6 +14,32 @@
 __global__ void reduceKernel(float *g_idata, float *g_odata, int n)
 {
     // TODO (12.1) implement parallel reduction kernel
+    extern __shared__ float sdata[];
+
+    unsigned int tid = threadIdx.x;
+    unsigned int i = blockIdx.x*blockDim.x + threadIdx.x;
+    sdata[tid] = (i < n) ? g_idata[i] : 0;
+    __syncthreads();
+
+    for (unsigned int s = 1; s < blockDim.x; s*=2)
+    {
+        unsigned int idx = 2*s*tid;
+
+        if (idx < blockDim.x) {
+            sdata[idx] += sdata[idx + s];
+        }
+
+        __syncthreads();
+    }
+
+//    for(unsigned int s=1; s < blockDim.x; s *= 2) {
+//        if (tid % (2*s) == 0) {
+//        sdata[tid] += sdata[tid + s];
+//        }
+//        __syncthreads();
+//    }
+
+    if (tid == 0) g_odata[blockIdx.x] = sdata[0];
 }
 
 
@@ -28,10 +54,12 @@ void runParallelReduction(int n, size_t repeats)
     }
 
     // TODO (12.1) first implement parallel reduction (sum) on CPU (optional) and measure time
+    float *input = new float[n];
 
     // allocate arrays on GPU
     float *d_input = NULL;
     float *d_output = NULL;
+
     // TODO alloc cuda memory for device arrays
     cudaMalloc(&d_input, n *sizeof(float)); CUDA_CHECK;
     cudaMalloc(&d_output, n *sizeof(float)); CUDA_CHECK;
@@ -43,11 +71,26 @@ void runParallelReduction(int n, size_t repeats)
     {
         // upload input to GPU
         // TODO (12.1) copy from elemns to d_input
+        cudaMemcpy(d_input, elemns, n * sizeof(float), cudaMemcpyHostToDevice); CUDA_CHECK;
 
-        while(true)
+        int length = n;
+
+        for (;;)
         {
             // TODO (12.1) implement parallel reduction
-            break;
+            dim3 block(min(32, length), 1, 1);
+            dim3 grid = computeGrid1D(block, length);
+            int smBytes = block.x * sizeof(float);
+
+            //std::cout << "grid size: " << grid.x << std::endl;
+
+            reduceKernel <<<grid,block,smBytes>>> (d_input, d_output, length);
+            //cudaDeviceSynchronize();
+            std::swap(d_input, d_output);
+            //cudaMemcpy(input, d_input, n* sizeof(float), cudaMemcpyDeviceToHost); CUDA_CHECK;
+
+            length = grid.x;
+            if (length <= 1) break;
         }
     }
 
@@ -58,6 +101,8 @@ void runParallelReduction(int n, size_t repeats)
     // download result
     float *result = new float[1];
     // TODO (12.1) download result from d_output to result
+    cudaMemcpy(result, d_input, sizeof(float), cudaMemcpyDeviceToHost); CUDA_CHECK;
+
     int sum = result[0];
     std::cout << "result reduce0: " << (int)sum << " (CPU=" << cpu << ")" << std::endl;
 
@@ -98,4 +143,5 @@ void runParallelReduction(int n, size_t repeats)
 
     delete[] elemns;
     delete[] result;
+    delete[] input;
 }
