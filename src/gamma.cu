@@ -58,7 +58,7 @@ void computeGammaCuda(float *imgOut, const float *imgIn, float gamma, int w, int
     }
 
     // calculate block and grid size
-    dim3 block(32, 8, nc);     // TODO (3.2) specify suitable block size
+    dim3 block(8, 4, nc);     // TODO (3.2) specify suitable block size
 
     // TODO (3.2) implement computeGrid2D() in helper.cuh etc
     dim3 grid = computeGrid2D(block, w, h);

@@ -37,6 +37,9 @@ int main(int argc,char **argv)
     bool cpu = cmd.get<bool>("cpu");
     std::cout << "mode: " << (cpu ? "CPU" : "GPU") << std::endl;
 
+//    Timer timer;
+//    timer.start();
+
     // init camera
     bool useCam = inputImage.empty();
     cv::VideoCapture camera;
@@ -220,6 +223,9 @@ int main(int argc,char **argv)
     // TODO free memory of all host arrays
     delete[] imgIn;
     delete[] imgOut;
+
+//    float t = timer.get()/repeats;
+//    std::cout << "average time: " << t * 1000 << " ms" << std::endl;
 
     // close all opencv windows
     cv::destroyAllWindows();

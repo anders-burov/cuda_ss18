@@ -21,13 +21,18 @@ void cuda_check(string file, int line)
     }
 }
 
-__global__ void AddArrays(float* a, float *b, float *c, int n)
+__device__ void AddArrays(float* a, float *b, float *c, int n, int idx)
 {
-    int idx = threadIdx.x + blockDim.x * blockIdx.x;
     if (idx < n)
     {
         c[idx] = a[idx] + b[idx];
     }
+}
+
+__global__ void Driver(float* a, float *b, float *c, int n)
+{
+    int idx = threadIdx.x + blockDim.x * blockIdx.x;
+    AddArrays(a, b, c, n, idx);
 }
 
 int main(int argc, char **argv)
@@ -65,7 +70,7 @@ int main(int argc, char **argv)
     
     dim3 block = dim3(n, 1, 1);
     dim3 grid = dim3(1, 1, 1);
-    AddArrays <<<grid, block>>> (d_a, d_b, d_c, n);
+    Driver <<<grid, block>>> (d_a, d_b, d_c, n);
 
     cudaMemcpy(c, d_c, n * sizeof(float), cudaMemcpyDeviceToHost); CUDA_CHECK;
     cudaFree(d_a); CUDA_CHECK;

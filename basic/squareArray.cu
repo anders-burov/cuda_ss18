@@ -21,10 +21,15 @@ void cuda_check(string file, int line)
     }
 }
 
-__global__ void SquareArray(float *a)
+__device__ void SquareArray(float *a, int idx)
+{
+    a[idx] *= a[idx];
+}
+
+__global__ void Driver(float *a)
 {
     int idx = threadIdx.x + blockDim.x * blockIdx.x;
-    a[idx] *= a[idx];
+    SquareArray(a, idx);
 }
 
 int main(int argc,char **argv)
@@ -60,7 +65,7 @@ int main(int argc,char **argv)
     
     dim3 block = dim3(n, 1, 1);
     dim3 grid = dim3(1, 1, 1);
-    SquareArray <<<grid, block>>>(d_a);
+    Driver <<<grid, block>>> (d_a);
 
     cudaMemcpy(a, d_a, n * sizeof(float), cudaMemcpyDeviceToHost); CUDA_CHECK;
     cudaFree(d_a); CUDA_CHECK;
